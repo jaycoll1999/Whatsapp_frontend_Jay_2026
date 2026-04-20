@@ -1,0 +1,533 @@
+"use client"
+
+import { Suspense, useState, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import axios from '@/config/axios'
+import DashboardLayout from "@/components/layout/DashboardLayout"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { 
+    Loader2, 
+    Wallet, 
+    Building2, 
+    Mail, 
+    Phone, 
+    FileText, 
+    ShoppingCart, 
+    Users, 
+    Crown 
+} from "lucide-react"
+import Script from "next/script"
+import { resellerPlans, userPlans } from "@/data/plansData"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import creditService from "@/services/creditService"
+import { businessService } from "@/services/businessService"
+import { usePlans } from "@/hooks/usePlans"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+
+declare global {
+    interface Window {
+        Razorpay: any;
+    }
+}
+
+function CheckoutContent() {
+    const searchParams = useSearchParams()
+    const router = useRouter()
+
+    const planName = searchParams.get('planName')
+    const [isLoading, setIsLoading] = useState(false)
+    const [isEditMode, setIsEditMode] = useState(false)
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        mobile: "",
+        company: "",
+        gstin: "",
+        allocate_to_user_id: "self"
+    })
+    const [businessUsers, setBusinessUsers] = useState<any[]>([])
+    const [userRole, setUserRole] = useState<string | null>(null)
+    
+    const [billingData, setBillingData] = useState({
+        grossAmount: 0,
+        gstAmount: 0,
+        totalAmount: 0,
+        credits: 0
+    })
+
+    // Fetch dynamic plans from the backend
+    const { plans: allPlans, isLoading: isPlansLoading } = usePlans('ALL')
+
+    // Find the plan details
+    const selectedPlan = allPlans.find(p => p.name === planName)
+
+    // Initialize billing data when plan is selected
+    useEffect(() => {
+        if (selectedPlan) {
+            const price = parseInt(selectedPlan.price.replace(/[^0-9]/g, ''))
+            const gst = Math.round(price * 0.18)
+            setBillingData({
+                grossAmount: price,
+                gstAmount: gst,
+                totalAmount: price + gst,
+                credits: parseInt(selectedPlan.credits.replace(/,/g, ''))
+            })
+        }
+    }, [selectedPlan])
+
+    // Fetch business users if role is reseller or admin
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (typeof window !== 'undefined') {
+                try {
+                    const role = localStorage.getItem('user_role')
+                    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || localStorage.getItem('adminToken')
+                    
+                    if (role && token) {
+                        setUserRole(role)
+                        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`
+                        
+                        if (role === 'admin') {
+                            // Admin can allocate to ANY user on the platform
+                            setFormData(prev => ({ ...prev, allocate_to_user_id: "" }));
+                            const { getGlobalUsers } = await import("@/config/api")
+                            const response = await getGlobalUsers()
+                            setBusinessUsers(Array.isArray(response) ? response : (response.data || []))
+                        } else if (role === 'reseller') {
+                            const resellerId = localStorage.getItem('user_id') || localStorage.getItem('reseller_id')
+                            if (resellerId) {
+                                const response = await businessService.getBusinessesByReseller(resellerId, token)
+                                setBusinessUsers(Array.isArray(response) ? response : (response.data || []))
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error fetching user info or businesses:', err)
+                }
+            }
+        }
+        fetchUserData()
+    }, [])
+
+    if (isPlansLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+                <p className="text-slate-500 font-semibold tracking-wide">Loading plan details...</p>
+            </div>
+        )
+    }
+
+    if (!selectedPlan && planName) {
+        return (
+            <div className="p-8 text-center flex flex-col items-center justify-center min-h-[60vh]">
+                <h2 className="text-2xl font-bold text-red-600 mb-4">Plan not found</h2>
+                <p className="text-slate-500 mb-6">The plan you requested could not be found or is no longer available.</p>
+                <Button onClick={() => window.history.back()} className="mt-4">
+                    Back to Plans
+                </Button>
+            </div>
+        )
+    }
+
+    if (!planName) {
+        return (
+            <div className="p-8 text-center flex flex-col items-center justify-center min-h-[60vh]">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">No plan selected</h2>
+                <Button onClick={() => window.history.back()} className="mt-4">
+                    View Plans
+                </Button>
+            </div>
+        )
+    }
+
+    const handlePayment = async () => {
+        if (!selectedPlan) return;
+        
+        // Simple validation
+        if (!formData.name || !formData.email || !formData.mobile) {
+            alert("Please fill in all required fields");
+            return;
+        }
+
+        if (userRole === 'admin' && !formData.allocate_to_user_id) {
+            alert("Please select a user to allocate this plan to.");
+            return;
+        }
+
+        setIsLoading(true)
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) {
+                alert("You must be logged in to purchase a plan")
+                router.push('/login')
+                return
+            }
+
+            // Step 1: Call backend to initiate payment
+            const payload: any = {
+                plan_name: selectedPlan.name,
+                credits: billingData.credits,
+                price: billingData.grossAmount
+            };
+            
+            if (formData.allocate_to_user_id !== "self") {
+                payload.allocated_to_user_id = formData.allocate_to_user_id;
+            }
+            
+            const response = await creditService.initiatePayment(payload, token)
+
+            if (response.success && response.razorpay_order_id) {
+                // Step 2: Open Razorpay Checkout
+                const options = {
+                    key: response.key,
+                    amount: response.amount,
+                    currency: response.currency,
+                    name: "WhatsApp Platform",
+                    description: selectedPlan.name,
+                    order_id: response.razorpay_order_id,
+                    handler: async function (paymentResponse: any) {
+                        try {
+                            setIsLoading(true);
+                            const verifyResult = await creditService.verifyPayment({
+                                razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                razorpay_order_id: paymentResponse.razorpay_order_id,
+                                razorpay_signature: paymentResponse.razorpay_signature
+                            }, token);
+
+                            if (verifyResult.success) {
+                                router.push('/dashboard/reseller/orders?status=success');
+                            } else {
+                                alert("Payment verification failed. Please contact support.");
+                            }
+                        } catch (err: any) {
+                            console.error("Verification error:", err);
+                            alert("Error verifying payment");
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    },
+                    prefill: {
+                        name: formData.name,
+                        email: formData.email,
+                        contact: formData.mobile
+                    },
+                    notes: {
+                        txnid: response.txnid
+                    },
+                    theme: {
+                        color: "#2563eb"
+                    }
+                };
+                const rzp = new window.Razorpay(options);
+                rzp.open();
+            } else {
+                throw new Error("Failed to initialize payment gateway");
+            }
+
+        } catch (error: any) {
+            console.error("Purchase failed:", error)
+            alert(error.response?.data?.detail || error.message || "Failed to process purchase. Please try again.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    // Removed static calculations
+
+    return (
+        <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-50/50 via-white to-white pb-20">
+            <div className="max-w-4xl mx-auto py-12 px-6">
+                {/* Header Section */}
+                <div className="flex flex-col items-center text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
+                    <div className="p-4 bg-white shadow-xl shadow-blue-500/10 rounded-2xl mb-6 ring-1 ring-blue-50">
+                        <ShoppingCart className="h-10 w-10 text-blue-600" />
+                    </div>
+                    <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">
+                        Plan Purchase
+                    </h1>
+                    <p className="text-slate-500 font-semibold max-w-md">
+                        Secure your subscription and unlock premium automation features for your business.
+                    </p>
+                </div>
+
+            <div className="grid grid-cols-1 gap-8">
+                {/* Personal Information */}
+                <Card className="bg-white/80 backdrop-blur-xl border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 rounded-[2rem] overflow-hidden">
+                    <CardHeader className="bg-slate-100/30 border-b border-slate-100/50 p-6 px-10">
+                        <CardTitle className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                            <Users className="h-4 w-4 text-blue-600" />
+                            Personal Information
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                                <div className="relative group">
+                                    <Users className="absolute left-4 top-4 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                    <Input 
+                                        placeholder="Enter your full name" 
+                                        className="pl-11 h-14 rounded-2xl bg-slate-50/50 border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-semibold text-slate-700"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                                <div className="relative group">
+                                    <Mail className="absolute left-4 top-4 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                    <Input 
+                                        placeholder="Enter your email" 
+                                        className="pl-11 h-14 rounded-2xl bg-slate-50/50 border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-semibold text-slate-700"
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                                <div className="relative group">
+                                    <Phone className="absolute left-4 top-4 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                    <Input 
+                                        placeholder="Enter your phone number" 
+                                        className="pl-11 h-14 rounded-2xl bg-slate-50/50 border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-semibold text-slate-700"
+                                        value={formData.mobile}
+                                        onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name (Optional)</label>
+                                <div className="relative group">
+                                    <Building2 className="absolute left-4 top-4 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                    <Input 
+                                        placeholder="Enter company name" 
+                                        className="pl-11 h-14 rounded-2xl bg-slate-50/50 border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-semibold text-slate-700"
+                                        value={formData.company}
+                                        onChange={(e) => setFormData({...formData, company: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">GSTIN (Optional)</label>
+                                <div className="relative group">
+                                    <FileText className="absolute left-4 top-4 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                    <Input 
+                                        placeholder="Enter GSTIN (if applicable)" 
+                                        className="pl-11 h-14 rounded-2xl bg-slate-50/50 border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-semibold text-slate-700"
+                                        value={formData.gstin}
+                                        onChange={(e) => setFormData({...formData, gstin: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            
+                             {/* Allocation Logic for Admins/Resellers */}
+                             {(userRole === 'reseller' || userRole === 'admin') && (
+                                <div className="space-y-3 md:col-span-2 animate-in slide-in-from-top-2 duration-500">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                        Allocate Plan To
+                                        <Badge variant="outline" className="text-[8px] font-black uppercase text-blue-600 bg-blue-50 border-blue-100">
+                                            {resellerPlans.find(p => p.name === planName) ? "Resellers Only" : "Business Users Only"}
+                                        </Badge>
+                                    </label>
+                                    <Select 
+                                        value={formData.allocate_to_user_id} 
+                                        onValueChange={(value) => setFormData({...formData, allocate_to_user_id: value})}
+                                    >
+                                        <SelectTrigger className="w-full h-14 rounded-2xl bg-slate-50/50 border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 font-semibold text-slate-700 overflow-hidden">
+                                            <SelectValue placeholder="Select a user to allocate" />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[300px]">
+                                            {userRole !== 'admin' && (
+                                                <SelectItem value="self" className="font-semibold text-blue-600">Buy for Myself (My Wallet) - Default</SelectItem>
+                                            )}
+                                            {businessUsers
+                                                .filter(user => {
+                                                    if (userRole !== 'admin') return true;
+                                                    const isResellerPlan = resellerPlans.find(p => p.name === planName);
+                                                    if (isResellerPlan) return user.role === "Reseller";
+                                                    return user.role === "Direct Business";
+                                                })
+                                                .map((user) => {
+                                                    const userId = user.busi_user_id || user.id || user.reseller_id;
+                                                    const name = user.profile?.name || user.business?.business_name || user.name || 'Unnamed';
+                                                    const email = user.profile?.email || user.email || 'No email';
+                                                    return (
+                                                        <SelectItem key={userId} value={userId}>
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold">{name}</span>
+                                                                <span className="text-[10px] text-gray-400">{email}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    );
+                                                })}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-gray-400 mt-2 px-1 font-medium">If you select a user, the credits from this plan will be automatically deposited into their wallet after purchase.</p>
+                                </div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Plan Details */}
+                <Card className="bg-white/80 backdrop-blur-xl border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 rounded-[2rem] overflow-hidden">
+                    <CardHeader className="bg-slate-100/30 border-b border-slate-100/50 p-6 px-10">
+                        <CardTitle className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                            <Crown className="h-4 w-4 text-blue-600" />
+                            Plan Details
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-10 font-bold">
+                        <div className="grid grid-cols-2 gap-8 text-center sm:text-left">
+                            <div className="border-r pr-8">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Plan Name</p>
+                                <Badge variant="outline" className="text-lg font-black text-blue-600 border-none p-0">{selectedPlan?.name}</Badge>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Credits</p>
+                                {isEditMode ? (
+                                    <Input 
+                                        type="number"
+                                        value={billingData.credits}
+                                        onChange={(e) => setBillingData({...billingData, credits: parseInt(e.target.value) || 0})}
+                                        className="h-8 w-24 text-center font-black rounded-lg bg-gray-50 border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-600"
+                                    />
+                                ) : (
+                                    <p className="text-lg font-black text-gray-900">{billingData.credits.toLocaleString()}</p>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Billing Summary */}
+                <Card className="bg-white/80 backdrop-blur-xl border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 rounded-[2rem] overflow-hidden">
+                    <CardHeader className="bg-slate-100/30 border-b border-slate-100/50 p-6 px-10">
+                        <CardTitle className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                            <Wallet className="h-4 w-4 text-blue-600" />
+                            Billing Summary
+                            <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="ml-auto text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 transition-colors"
+                                onClick={() => setIsEditMode(!isEditMode)}
+                            >
+                                <FileText className="h-4 w-4 mr-2" />
+                                {isEditMode ? 'Save Changes' : 'Edit Billing'}
+                            </Button>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-10 space-y-6">
+                        <div className="flex justify-between items-center text-sm font-medium">
+                            <span className="text-gray-500">Gross Amount</span>
+                            {isEditMode ? (
+                                <Input 
+                                    type="number"
+                                    value={billingData.grossAmount}
+                                    onChange={(e) => {
+                                        const newPrice = parseInt(e.target.value) || 0
+                                        const newGst = Math.round(newPrice * 0.18)
+                                        setBillingData({
+                                            ...billingData,
+                                            grossAmount: newPrice,
+                                            gstAmount: newGst,
+                                            totalAmount: newPrice + newGst
+                                        })
+                                    }}
+                                    className="w-32 text-right font-mono bg-gray-50 border border-gray-200 rounded px-2 py-1"
+                                />
+                            ) : (
+                                <span className="font-black text-gray-900">₹{billingData.grossAmount.toLocaleString()}</span>
+                            )}
+                        </div>
+                        <div className="flex justify-between items-center text-sm font-medium">
+                            <span className="text-gray-500">GST (18%)</span>
+                            {isEditMode ? (
+                                <Input 
+                                    type="number"
+                                    value={billingData.gstAmount}
+                                    onChange={(e) => {
+                                        const newGst = parseInt(e.target.value) || 0
+                                        setBillingData({
+                                            ...billingData,
+                                            gstAmount: newGst,
+                                            totalAmount: billingData.grossAmount + newGst
+                                        })
+                                    }}
+                                    className="w-32 text-right font-mono bg-gray-50 border border-gray-200 rounded px-2 py-1"
+                                />
+                            ) : (
+                                <span className="font-black text-gray-900">₹{billingData.gstAmount.toLocaleString()}</span>
+                            )}
+                        </div>
+                        <div className="flex justify-between items-center text-sm font-medium">
+                            <span className="text-gray-500">Internet Handling Charge</span>
+                            <span className="font-black text-gray-900">₹0.00</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-6 border-t border-dashed border-gray-200">
+                            <span className="text-xl font-black text-gray-900 uppercase tracking-tighter">Total Amount</span>
+                            <span className="text-3xl font-black text-blue-600 font-mono tracking-tighter">₹{billingData.totalAmount.toLocaleString()}</span>
+                        </div>
+                        
+                        {/* Edit Mode Indicator */}
+                        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-blue-600" />
+                                <span className="text-sm font-medium text-blue-700">
+                                    {isEditMode ? 'Edit Mode: Modify billing details above' : 'Billing details can be edited before checkout'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="pt-8 flex justify-center">
+                            <Button 
+                                onClick={handlePayment}
+                                disabled={isLoading}
+                                className="h-14 px-12 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-xl shadow-blue-500/20 transition-all hover:scale-105 active:scale-95"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                        {isEditMode ? 'Saving Changes...' : 'Redirecting to Payment Gateway...'}
+                                    </>
+                                ) : (
+                                    isEditMode ? 'Save & Continue' : 'Proceed to Checkout'
+                                )}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export default function CheckoutPage() {
+    return (
+        <DashboardLayout>
+            <Script 
+                src="https://checkout.razorpay.com/v1/checkout.js" 
+                strategy="afterInteractive" 
+            />
+            <Suspense fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+            }>
+                <CheckoutContent />
+            </Suspense>
+        </DashboardLayout>
+    )
+}
