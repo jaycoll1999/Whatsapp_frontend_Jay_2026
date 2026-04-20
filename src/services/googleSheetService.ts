@@ -257,12 +257,16 @@ export const googleSheetService = {
             const payloadData = JSON.parse(payload.get('payload') as string);
             const sheetId = payloadData.sheet_id;
             
-            const response = await api.post(`google-sheets/${sheetId}/triggers`, payload, {
+            // If sheetId exists, use sheet-specific endpoint, otherwise use standalone
+            const url = sheetId ? `google-sheets/${sheetId}/triggers` : `google-sheets/triggers`;
+            
+            const response = await api.post(url, payload, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             return response.data;
         } else {
-            const response = await api.post(`google-sheets/${payload.sheet_id}/triggers`, payload);
+            const url = payload.sheet_id ? `google-sheets/${payload.sheet_id}/triggers` : `google-sheets/triggers`;
+            const response = await api.post(url, payload);
             return response.data;
         }
     }

@@ -287,29 +287,38 @@ export default function UnofficialTriggerPage() {
                 message_column: triggerConfig.message_column,
                 is_enabled: true,
                 scheduled_at: scheduledAt ? scheduledAt.replace('T', ' ') : null,
-                // Round Robin fields
+                
+                // Fields for CampaignCreateRequest (Backend compatibility)
+                device_ids: selectedDeviceIds,
+                templates: filledTemplates.length > 0 
+                    ? filledTemplates.map(t => ({ content: t.content.trim() })) 
+                    : [{ content: "" }],
+                
+                // Fields for TriggerCreateRequest (Round Robin)
                 multi_device_ids: selectedDeviceIds,
                 multi_templates: filledTemplates.length > 0 ? filledTemplates.map(t => t.content.trim()) : [""]
             };
 
-            if (isSheetSource) {
-                const formData = new FormData();
-                formData.append("payload", JSON.stringify({
-                    sheet_id: selectedSheetId,
-                    ...payload
-                }));
-                if (mediaFile) {
-                    formData.append("file", mediaFile);
-                }
-                
-                await googleSheetService.createTrigger(formData);
-            } else {
-                // ... existing file handle ...
-                const formData = new FormData();
-                formData.append("payload", JSON.stringify(payload));
-                if (dataSourceFile) formData.append("data_file", dataSourceFile);
-                await campaignService.createCampaign(formData);
+            console.log("[CAMPAIGN] Pre-flight payload verification:", payload);
+
+            const formData = new FormData();
+            formData.append("payload", JSON.stringify({
+                sheet_id: isSheetSource ? selectedSheetId : "none",
+                source_type: sourceType,
+                ...payload
+            }));
+            
+            // Attach media file if exists
+            if (mediaFile) {
+                formData.append("file", mediaFile);
             }
+            
+            // Attach data source file for file-based triggers
+            if (!isSheetSource && dataSourceFile) {
+                formData.append("data_file", dataSourceFile);
+            }
+            
+            await googleSheetService.createTrigger(formData);
 
             showAlert("Success", "✅ Trigger created successfully with Round Robin and random delays active.");
             
