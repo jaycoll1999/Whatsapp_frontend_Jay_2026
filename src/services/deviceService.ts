@@ -122,10 +122,26 @@ export const deviceService = {
     },
 
     startDevice: async (deviceId: string) => {
+        // 🔥 CRITICAL: Prevent duplicate /start calls with debouncing
+        const startKey = `start_${deviceId}`;
+        const now = Date.now();
+        
+        // Check if we recently called start for this device (within 10 seconds)
+        const lastStart = (window as any)[startKey];
+        if (lastStart && (now - lastStart) < 10000) {
+            console.warn(`⏸️ Start request blocked for ${deviceId} - too soon after last request`);
+            throw new Error('START_COOLDOWN: Please wait before starting another session');
+        }
+        
+        // Record this start attempt
+        (window as any)[startKey] = now;
+        
         try {
             const response = await axios.post(`${API_URL}/api/devices/${deviceId}/start`);
             return response.data;
         } catch (error) {
+            // Clear start attempt on error
+            delete (window as any)[startKey];
             console.error('Failed to start device session:', error);
             throw error;
         }

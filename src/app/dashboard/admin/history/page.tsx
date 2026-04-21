@@ -386,7 +386,9 @@ export default function AdminActivityHistoryPage() {
                                         <td className="px-6 py-6">
                                             <div className="space-y-1">
                                                 <p className="text-[13px] font-black text-slate-900">{activity.affectedUser.name}</p>
-                                                <p className="text-[11px] font-bold text-slate-400">{activity.affectedUser.email}</p>
+                                                {activity.affectedUser.email && activity.affectedUser.email !== "N/A" && (
+                                                    <p className="text-[11px] font-bold text-slate-400">{activity.affectedUser.email}</p>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-6 py-6">
@@ -451,15 +453,9 @@ export default function AdminActivityHistoryPage() {
 
                     {selectedActivity && (
                         <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-8">
-                                <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date & Time</p>
-                                    <p className="text-sm font-bold text-slate-900">{selectedActivity.dateTime.date} at {selectedActivity.dateTime.time}</p>
-                                </div>
-                                <div className="space-y-1.5 text-right">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">IP Address</p>
-                                    <p className="text-sm font-bold text-slate-900">{selectedActivity.ipAddress}</p>
-                                </div>
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date & Time</p>
+                                <p className="text-sm font-bold text-slate-900">{selectedActivity.dateTime.date} at {selectedActivity.dateTime.time}</p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm shadow-slate-200/20">
@@ -479,7 +475,9 @@ export default function AdminActivityHistoryPage() {
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Affected User</p>
                                     <div className="space-y-0.5">
                                         <p className="text-[13px] font-black text-slate-900">{selectedActivity.affectedUser.name}</p>
-                                        <p className="text-[11px] font-bold text-slate-400">{selectedActivity.affectedUser.email}</p>
+                                        {selectedActivity.affectedUser.email && selectedActivity.affectedUser.email !== "N/A" && (
+                                            <p className="text-[11px] font-bold text-slate-400">{selectedActivity.affectedUser.email}</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>

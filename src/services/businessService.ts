@@ -89,7 +89,7 @@ export const businessService = {
 
     // Login as a Business User
     login: async (data: BusinessLoginData) => {
-        const response = await axios.post(`${API_URL}/login`, data);
+        const response = await axios.post(`${API_URL}/login`, data, { timeout: 15000 }); // 15s timeout
         return response.data;
     },
 

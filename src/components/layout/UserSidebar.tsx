@@ -69,7 +69,7 @@ const navGroups: NavGroup[] = [
                   { label: "Delivery Reports", href: "/dashboard/user/reports/delivery-reports" },
                   { label: "Schedule Reports", href: "/dashboard/user/reports/schedule-reports" },
               ]},
-            { label: "API", icon: Code, href: "https://documenter.getpostman.com/view/1240173/2sB3B8stEM", color: "text-slate-400", external: true },
+            { label: "API", icon: Code, href: "https://www.postman.com/jaypaltupare9421-3865923/whatsapp-business-api-2026/collection/29528975-e135b2258c2c?action=share&source=copy-link&creator=47786759", color: "text-slate-400", external: true },
         ]
     },
 ]

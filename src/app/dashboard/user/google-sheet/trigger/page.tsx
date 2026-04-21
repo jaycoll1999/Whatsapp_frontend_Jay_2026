@@ -87,19 +87,44 @@ export default function UnofficialTriggerPage() {
 
     const loadDevices = async () => {
         try {
+            console.log("🔄 Loading devices for trigger page...");
             const userId = localStorage.getItem("user_id");
             if (!userId) {
                 console.error("No user ID found in localStorage");
                 return;
             }
-            const data = await deviceService.getUnofficialDevices(false);
-            setAllDevices(data); // Save all their devices so we can map names correctly in the table
             
-            // Filter to show only connected devices in the dropdown
-            const connectedDevices = data.filter((device: Device) => device.session_status === 'connected');
-            setDevices(connectedDevices);
+            // Force sync to get latest device status
+            const allData = await deviceService.getUnofficialDevices(true); // true = force sync
+            console.log(`📱 Loaded ${allData.length} total devices from unofficial list`);
+            setAllDevices(allData); // Save all their devices so we can map names correctly in the table
+            
+            let finalDevices: Device[] = [];
+            
+            // Use the dedicated connected devices endpoint for better accuracy
+            try {
+                const connectedData = await deviceService.getConnectedUnofficialDevices();
+                console.log(`✅ Loaded ${connectedData.length} connected devices from connected endpoint`);
+                finalDevices = connectedData;
+            } catch (connectedError) {
+                console.warn("⚠️ Failed to get connected devices, falling back to filtered list:", connectedError);
+                // Fallback to filtering all devices
+                const connectedDevices = allData.filter((device: Device) => device.session_status === 'connected');
+                console.log(`🔄 Fallback: Found ${connectedDevices.length} connected devices by filtering`);
+                finalDevices = connectedDevices;
+            }
+            
+            // Additional fallback: if still no devices, show all devices with a warning
+            if (finalDevices.length === 0 && allData.length > 0) {
+                console.warn("⚠️ No connected devices found, showing all devices for selection");
+                finalDevices = allData;
+            }
+            
+            setDevices(finalDevices);
+            console.log(`📊 Final device count for selection: ${finalDevices.length}`);
         } catch (error) {
-            console.error("Failed to load devices", error);
+            console.error("❌ Failed to load devices:", error);
+            showAlert("Device Load Error", "Failed to load devices. Please refresh the page.");
         }
     };
 
@@ -287,6 +312,9 @@ export default function UnofficialTriggerPage() {
                 message_column: triggerConfig.message_column,
                 is_enabled: true,
                 scheduled_at: scheduledAt ? scheduledAt.replace('T', ' ') : null,
+                
+                // Single device_id for backward compatibility
+                device_id: selectedDeviceIds.length > 0 ? selectedDeviceIds[0] : null,
                 
                 // Fields for CampaignCreateRequest (Backend compatibility)
                 device_ids: selectedDeviceIds,
@@ -479,6 +507,14 @@ export default function UnofficialTriggerPage() {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
+                    <button 
+                        onClick={loadDevices} 
+                        disabled={refreshLoading}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all text-xs font-medium shadow-sm"
+                    >
+                        <Smartphone className={`w-3 h-3 ${refreshLoading ? 'animate-spin' : ''}`} />
+                        Refresh Devices
+                    </button>
                     <button 
                         onClick={fetchHistory} 
                         disabled={refreshLoading}

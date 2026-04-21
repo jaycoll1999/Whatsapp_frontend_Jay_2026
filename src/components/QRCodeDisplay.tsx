@@ -55,7 +55,7 @@ export default function QRCodeDisplay({
         if (!qrBase64) setLoading(true);
         setError(null);
 
-        // ✅ START SESSION FIRST
+        // START SESSION FIRST
         if (!hasStarted) {
           try {
             await deviceService.startDevice(deviceId);
@@ -69,81 +69,88 @@ export default function QRCodeDisplay({
 
         if (!isMounted.current) return;
 
-        console.log('🔄 QR Response:', data);
+        console.log(' QR Response:', data);
 
-        // ✅ CONNECTED
+        // CONNECTED
         if (data.status === "connected") {
-          console.log('✅ Device already connected');
+          console.log(' Device already connected');
           handleConnected();
           return;
         }
 
-        // ✅ QR READY (primary state)
+        // QR READY (primary state)
         if ((data.status === "ready" || data.status === "qr_ready") && data.qr_code) {
-          console.log('✅ QR Code ready for scanning');
+          console.log(' QR Code ready for scanning');
           setQrBase64(data.qr_code);
           setStatus("scannable");
           setLoading(false);
           setRetryCount(0);
-          scheduleNext(3000); // 🔹 KEEP POLLING while waiting for scan
+          scheduleNext(3000); // KEEP POLLING while waiting for scan
           return;
         }
 
-        // ✅ Pending states
+        // Pending states
         if (
           data.status === "pending" ||
           data.status === "initializing" ||
           data.status === "connecting" ||
           data.status === "created"
         ) {
-          console.log('⏳ Device in pending state:', data.status);
+          console.log(' Device in pending state:', data.status);
           setStatus("initializing");
           scheduleNext(2000); // Poll every 2 seconds as requested
           return;
         }
 
-        // 🚨 LOGGED OUT state
+        // LOGGED OUT state
         if (data.status === "logged_out") {
-          console.log('❌ Device logged out');
+          console.log(' Device logged out');
           setQrBase64(null);
           setStatus("logged_out");
           setLoading(false);
           return; // Stop polling completely
         }
 
-        // ✅ Cooldown
+        // Cooldown
         if (data.status === "cooldown") {
-          console.log('⏸ Device in cooldown state');
+          console.log(' Device in cooldown state');
           scheduleNext(3000);
           return;
         }
 
-        // ✅ Direct QR fallback
+        // Direct QR fallback
         if (data.qr_code && !data.status) {
-          console.log('✅ Direct QR fallback');
+          console.log(' Direct QR fallback');
           setQrBase64(data.qr_code);
           setStatus("scannable");
           setLoading(false);
           setRetryCount(0);
-          scheduleNext(3000); // 🔹 KEEP POLLING
+          scheduleNext(3000); // KEEP POLLING
           return;
         }
 
         // Fallback retry
-        console.log('🔄 Unknown status, retrying...');
+        console.log(' Unknown status, retrying...');
         scheduleNext(2000);
       } catch (err: any) {
         if (!isMounted.current) return;
 
-        console.error('❌ QR fetch error:', err);
+        console.error(' QR fetch error:', err);
         setLoading(false);
 
         const responseStatus = err.response?.status;
         const errorMessage = err.response?.data?.message || err.message;
 
         if (responseStatus === 409) {
-          console.log('✅ Device already connected');
+          console.log('Device already connected');
           handleConnected();
+          return;
+        }
+
+        // Handle QR cooldown errors
+        if (errorMessage?.includes('QR_REQUEST_COOLDOWN')) {
+          console.log('QR request cooldown, waiting...');
+          scheduleNext(6000); // Wait longer for cooldown
           return;
         }
 
@@ -163,7 +170,7 @@ export default function QRCodeDisplay({
           responseStatus === 503 ||
           responseStatus === 500
         ) {
-          console.log('🔄 Server error, retrying...');
+          console.log(' Server error, retrying...');
           scheduleNext(5000);
           return;
         }
@@ -186,7 +193,7 @@ export default function QRCodeDisplay({
     };
   }, [deviceId, userId]);
 
-  // 🔹 UI STATES
+  // UI STATES
 
   const getValidImgSrc = (qr: string | null): string | null => {
     if (!qr) return null;
@@ -230,7 +237,7 @@ export default function QRCodeDisplay({
     return (
       <div className="flex flex-col items-center justify-center py-10 space-y-4 bg-red-50 p-6 rounded-xl border border-red-200">
         <div className="text-red-600 font-bold text-lg text-center">
-          ⚠️ Device logged out from mobile device. Please reconnect.
+          Device logged out from mobile device. Please reconnect.
         </div>
         <p className="text-sm text-red-500 text-center max-w-sm">
           You requested a logout from your WhatsApp app. You will need to refresh this page and generate a new QR code to link again.
@@ -253,10 +260,10 @@ export default function QRCodeDisplay({
         <img
           src={imgSrc}
           alt="WhatsApp QR"
-          className="w-64 h-64 object-contain"
+          className="w-64 h-64 object-contain border-0"
         />
       ) : (
-        <div className="w-64 h-64 bg-gray-50 flex items-center justify-center text-gray-400">
+        <div className="w-64 h-64 bg-gray-50 flex items-center justify-center text-gray-400 border-0">
           <div className="flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00a884]"></div>
             <div className="text-sm">

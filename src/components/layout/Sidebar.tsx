@@ -31,8 +31,8 @@ const resellerNavGroups = (role?: string | null) => [
     {
         label: "Tools",
         items: [
-            { icon: Code,         label: "API",               href: "https://documenter.getpostman.com/view/1240173/2sB3B8stEM", color: "text-slate-500", external: true },
             { icon: History,      label: "Activity History",  href: "/dashboard/reseller/history",   color: "text-slate-500" },
+            { icon: Code,         label: "API",               href: "https://www.postman.com/jaypaltupare9421-3865923/whatsapp-reseller-api-2026/collection/5vzozu7/whatsapp-platform-api?action=share&creator=47786759", color: "text-slate-500", external: true },
         ]
     },
 ]

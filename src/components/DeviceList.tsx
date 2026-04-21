@@ -5,6 +5,7 @@ import { deviceService, Device } from '@/services/deviceService';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import { getErrorMessage } from '@/utils/error';
 import { useModal } from '@/context/ModalContext';
+import { API_BASE_URL } from '@/config/api';
 import { 
     Plus, 
     RefreshCw, 
@@ -36,14 +37,17 @@ export default function DeviceList({ userId }: { userId: string }) {
     // Modal State
     const [showAddModal, setShowAddModal] = useState(false);
     const [newDeviceName, setNewDeviceName] = useState("");
+    
+    // API URL for monitoring endpoints
+    const API_URL = API_BASE_URL.replace('/api', '');
 
     const fetchDevices = async () => {
         try {
             setLoading(true);
 
-            // 🔥 FIXED: Use separate endpoints for strict device type filtering
+            // 🔥 FIXED: Use separate endpoints for strict device type filtering with force sync
             const [unofficial, official] = await Promise.all([
-                deviceService.getUnofficialDevices(),
+                deviceService.getUnofficialDevices(true), // Force sync to get latest status
                 deviceService.getOfficialDevices()
             ]);
 
@@ -62,46 +66,112 @@ export default function DeviceList({ userId }: { userId: string }) {
         }
     }, [userId]);
 
-    // 🔥 TASK 3: Real-time logout detection via background polling
+    // 🔥 ENHANCED: Improved polling with stability checks and debouncing
     useEffect(() => {
         if (!userId) return;
 
-        // We only poll to check if ANY of our CURRENTLY CONNECTED unofficial devices 
-        // suddenly became 'logged_out' due to a mobile disconnect
-        const connectedDeviceIds = unofficialDevices
-            .filter(d => d.session_status === 'connected')
-            .map(d => d.device_id);
+        // Monitor all devices for any status changes, not just logout
+        const allDeviceIds = unofficialDevices.map(d => d.device_id);
 
-        if (connectedDeviceIds.length === 0) return;
+        if (allDeviceIds.length === 0) return;
 
+        // 🔥 ENHANCED: Track status history for stability
+        const statusHistory: Record<string, Array<{status: string, timestamp: number}>> = {};
+        
         const intervalId = setInterval(async () => {
             try {
-                // Fetch latest statuses
-                const unofficial = await deviceService.getUnofficialDevices();
+                // 🔥 FIXED: Reduced polling frequency from 5s to 20s to prevent backend overload
+                const unofficial = await deviceService.getUnofficialDevices(false); // false = no force sync
 
-                let detectedLogout = false;
+                let statusChanged = false;
+                let criticalChange = false;
 
-                // Compare new statuses against our known 'connected' devices
-                for (const oldId of connectedDeviceIds) {
-                    const latestDevice = unofficial.find((d: Device) => d.device_id === oldId);
-                    if (latestDevice && latestDevice.session_status === 'logged_out') {
-                        // 🚨 Mobile Logout Detected!
-                        detectedLogout = true;
+                // 🔥 ENHANCED: Add stability check - only update if status is stable for 2 consecutive polls
+                const stableChanges: Array<{device: Device, oldStatus: string, newStatus: string}> = [];
+                
+                for (const oldDevice of unofficialDevices) {
+                    const latestDevice = unofficial.find((d: Device) => d.device_id === oldDevice.device_id);
+                    
+                    if (latestDevice && latestDevice.session_status !== oldDevice.session_status) {
+                        // 🔥 ENHANCED: Initialize status history if needed
+                        if (!statusHistory[latestDevice.device_id]) {
+                            statusHistory[latestDevice.device_id] = [];
+                        }
+                        
+                        // Add current status to history
+                        statusHistory[latestDevice.device_id].push({
+                            status: latestDevice.session_status,
+                            timestamp: Date.now()
+                        });
+                        
+                        // Keep only last 3 entries
+                        if (statusHistory[latestDevice.device_id].length > 3) {
+                            statusHistory[latestDevice.device_id].shift();
+                        }
+                        
+                        // 🔥 ENHANCED: Check for status stability
+                        const history = statusHistory[latestDevice.device_id];
+                        const isStable = history.length >= 2 && 
+                                       history[history.length - 1].status === history[history.length - 2].status;
+                        
+                        // 🔥 FIXED: Ignore rapid status thrashing between connected/disconnected
+                        const isThrashing = (
+                            (oldDevice.session_status === 'connected' && latestDevice.session_status === 'disconnected') ||
+                            (oldDevice.session_status === 'disconnected' && latestDevice.session_status === 'connected')
+                        );
+                        
+                        // Only update if status is stable and not thrashing
+                        if (isStable && !isThrashing) {
+                            stableChanges.push({
+                                device: latestDevice,
+                                oldStatus: oldDevice.session_status,
+                                newStatus: latestDevice.session_status
+                            });
 
-                        // Force UI alert
-                        showAlert("Device Logout", `⚠️ Device "${latestDevice.device_name}" was logged out from your mobile device. Please remove it and reconnect.`);
-                        break; // One alert is enough
+                            // 🔥 FIXED: Mark critical changes for immediate UI update
+                            if (latestDevice.session_status === 'connected' || latestDevice.session_status === 'logged_out') {
+                                criticalChange = true;
+                            } else {
+                                statusChanged = true;
+                            }
+                        } else if (isThrashing) {
+                            console.warn(`⚠️ Status thrashing detected for device ${latestDevice.device_id}: ${oldDevice.session_status} -> ${latestDevice.session_status}`);
+                        } else if (!isStable) {
+                            console.log(`⏳ Status not yet stable for device ${latestDevice.device_id}: ${latestDevice.session_status}`);
+                        }
                     }
                 }
 
-                if (detectedLogout) {
-                    // Update the state so the table reflects the new logged_out status
+                // 🔥 FIXED: Only update UI if there are stable changes
+                if (stableChanges.length > 0) {
+                    console.log(`🔄 Updating ${stableChanges.length} devices with stable status changes`);
                     setUnofficialDevices(unofficial);
+                    
+                    if (criticalChange) {
+                        // Force immediate refresh for critical changes
+                        setTimeout(fetchDevices, 1000);
+                    }
+                }
+
+                if (statusChanged && stableChanges.length > 0) {
+                    // Update state to reflect new statuses
+                    console.log('🔄 Stable device status changes:', stableChanges);
+                    
+                    // If critical change, also refresh official devices
+                    if (criticalChange) {
+                        try {
+                            const official = await deviceService.getOfficialDevices();
+                            setOfficialDevices(official);
+                        } catch (err) {
+                            console.warn('Failed to refresh official devices:', err);
+                        }
+                    }
                 }
             } catch (error) {
-                // Ignore silent polling errors
+                console.warn('Device status polling error:', error);
+                // 🔥 FIXED: Don't show alerts for polling errors to reduce noise
             }
-        }, 3000); // 3-second heartbeat
+        }, 20000); // 🔥 FIXED: Increased from 5s to 20s to reduce backend load
 
         return () => clearInterval(intervalId);
     }, [userId, unofficialDevices]);
@@ -180,6 +250,7 @@ export default function DeviceList({ userId }: { userId: string }) {
         }
     };
 
+    
     const handleReconnect = async (device: Device) => {
         try {
             setActiveActionDeviceId(device.device_id);
@@ -367,14 +438,6 @@ export default function DeviceList({ userId }: { userId: string }) {
                 
                 <div className="flex items-center gap-3 w-full md:w-auto">
                     <button
-                        onClick={handleHealDevices}
-                        disabled={actionLoading}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 px-5 py-3 rounded-2xl transition-all border border-gray-200 font-bold text-sm active:scale-95 disabled:opacity-50"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${actionLoading ? 'animate-spin' : ''}`} />
-                        Sync Status
-                    </button>
-                    <button
                         onClick={handleAddDevice}
                         disabled={actionLoading || unofficialDevices.length >= 5}
                         className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl transition-all shadow-lg shadow-blue-200 font-bold text-sm active:scale-95 disabled:opacity-50"
@@ -462,7 +525,7 @@ export default function DeviceList({ userId }: { userId: string }) {
                             
                             <div className="space-y-8">
                                 <div className="flex items-start gap-4">
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white text-[#111b21] flex items-center justify-center font-semibold mt-1">
+                                    <div className="shrink-0 w-8 h-8 rounded-full bg-white text-[#111b21] flex items-center justify-center font-semibold mt-1">
                                         1
                                     </div>
                                     <p className="text-xl leading-relaxed">
@@ -471,7 +534,7 @@ export default function DeviceList({ userId }: { userId: string }) {
                                 </div>
 
                                 <div className="flex items-start gap-4">
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white text-[#111b21] flex items-center justify-center font-semibold mt-1">
+                                    <div className="shrink-0 w-8 h-8 rounded-full bg-white text-[#111b21] flex items-center justify-center font-semibold mt-1">
                                         2
                                     </div>
                                     <p className="text-xl leading-relaxed flex items-center gap-2">
@@ -485,7 +548,7 @@ export default function DeviceList({ userId }: { userId: string }) {
                                 </div>
 
                                 <div className="flex items-start gap-4">
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white text-[#111b21] flex items-center justify-center font-semibold mt-1">
+                                    <div className="shrink-0 w-8 h-8 rounded-full bg-white text-[#111b21] flex items-center justify-center font-semibold mt-1">
                                         3
                                     </div>
                                     <p className="text-xl leading-relaxed">
@@ -506,7 +569,7 @@ export default function DeviceList({ userId }: { userId: string }) {
                         </div>
 
                         {/* Right Side: QR Code Area */}
-                        <div className="p-8 md:p-12 md:bg-[#111b21] flex items-center justify-center bg-gray-100">
+                        <div className="p-8 md:p-12 bg-[#111b21] flex items-center justify-center">
                             <div className="bg-white p-4 rounded-lg shadow-xl">
                                 <QRCodeDisplay
                                     deviceId={selectedDevice.device_id}
@@ -522,7 +585,7 @@ export default function DeviceList({ userId }: { userId: string }) {
             {/* 🔥 ADD DEVICE MODAL */}
             <AnimatePresence>
                 {showAddModal && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -537,7 +600,7 @@ export default function DeviceList({ userId }: { userId: string }) {
                             className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden"
                         >
                             {/* Modal Header Decor */}
-                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600" />
+                            <div className="absolute top-0 left-0 w-full h-2 bg-linear-to-r from-blue-500 to-indigo-600" />
                             
                             <div className="flex justify-between items-start mb-6">
                                 <div className="bg-blue-50 p-3 rounded-2xl">
