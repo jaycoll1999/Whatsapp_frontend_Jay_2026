@@ -1,7 +1,7 @@
 import axios from '@/config/axios';
 
 // Try to use environment variable, fallback to localhost for development
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -30,7 +30,7 @@ export interface CampaignCreateRequest {
 export const campaignService = {
     listCampaigns: async (skip: number = 0, limit: number = 100) => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/campaign/?skip=${skip}&limit=${limit}`, getAuthHeaders());
+            const response = await axios.get(`${API_BASE_URL}/api/campaign/?skip=${skip}&limit=${limit}`, getAuthHeaders());
             return response.data;
         } catch (error: any) {
             throw new Error(error.response?.data?.detail || 'Failed to list campaigns');
@@ -43,7 +43,7 @@ export const campaignService = {
             const headers = getAuthHeaders().headers;
 
             const response = await axios.post(
-                `${API_BASE_URL}/campaign/create`,
+                `${API_BASE_URL}/api/campaign/create`,
                 data,
                 {
                     headers: {
@@ -60,7 +60,7 @@ export const campaignService = {
 
     startCampaign: async (campaignId: string) => {
         try {
-            const response = await axios.post(`${API_BASE_URL}/campaign/${campaignId}/start`, {}, getAuthHeaders());
+            const response = await axios.post(`${API_BASE_URL}/api/campaign/${campaignId}/start`, {}, getAuthHeaders());
             return response.data;
         } catch (error: any) {
             throw new Error(error.response?.data?.detail || 'Failed to start campaign');
@@ -69,7 +69,7 @@ export const campaignService = {
 
     pauseCampaign: async (campaignId: string) => {
         try {
-            const response = await axios.post(`${API_BASE_URL}/campaign/${campaignId}/pause`, {}, getAuthHeaders());
+            const response = await axios.post(`${API_BASE_URL}/api/campaign/${campaignId}/pause`, {}, getAuthHeaders());
             return response.data;
         } catch (error: any) {
             throw new Error(error.response?.data?.detail || 'Failed to pause campaign');
@@ -78,7 +78,7 @@ export const campaignService = {
 
     resumeCampaign: async (campaignId: string) => {
         try {
-            const response = await axios.post(`${API_BASE_URL}/campaign/${campaignId}/resume`, {}, getAuthHeaders());
+            const response = await axios.post(`${API_BASE_URL}/api/campaign/${campaignId}/resume`, {}, getAuthHeaders());
             return response.data;
         } catch (error: any) {
             throw new Error(error.response?.data?.detail || 'Failed to resume campaign');
@@ -87,7 +87,7 @@ export const campaignService = {
 
     getCampaignStatus: async (campaignId: string) => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/campaign/${campaignId}/status`, getAuthHeaders());
+            const response = await axios.get(`${API_BASE_URL}/api/campaign/${campaignId}/status`, getAuthHeaders());
             return response.data;
         } catch (error: any) {
             throw new Error(error.response?.data?.detail || 'Failed to get campaign status');
@@ -96,7 +96,7 @@ export const campaignService = {
 
     getCampaignLogs: async (campaignId: string) => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/campaign/${campaignId}/logs`, getAuthHeaders());
+            const response = await axios.get(`${API_BASE_URL}/api/campaign/${campaignId}/logs`, getAuthHeaders());
             return response.data;
         } catch (error: any) {
             throw new Error(error.response?.data?.detail || 'Failed to get campaign logs');
@@ -104,7 +104,7 @@ export const campaignService = {
     },
     deleteCampaign: async (campaignId: string) => {
         try {
-            const response = await axios.delete(`${API_BASE_URL}/campaign/${campaignId}`, getAuthHeaders());
+            const response = await axios.delete(`${API_BASE_URL}/api/campaign/${campaignId}`, getAuthHeaders());
             return response.data;
         } catch (error: any) {
             throw new Error(error.response?.data?.detail || 'Failed to delete campaign');
