@@ -494,15 +494,11 @@ export default function UnofficialTriggerPage() {
                         <Database className="w-6 h-6 text-emerald-600" />
                         Bulk Notification Triggers
                     </h1>
-                    <p className="text-gray-500 text-sm mt-1">Automate bulk messages based on Google Sheet changes (Unofficial API)</p>
+                    <p className="text-gray-500 text-sm mt-1">Automate bulk messages based on Google Sheet changes</p>
                     <div className="flex items-center gap-2 mt-2">
                         <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold flex items-center gap-1.5 shadow-sm border border-emerald-200">
                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                              AUTOMATION ACTIVE
-                        </span>
-                        <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-[10px] flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" />
-                            Unofficial API Context
                         </span>
                     </div>
                 </div>
