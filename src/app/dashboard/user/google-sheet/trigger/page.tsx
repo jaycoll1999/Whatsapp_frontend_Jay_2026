@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Activity, Clock, CheckCircle, Database, FileText, Trash2, ArrowRight, Upload, HelpCircle, Settings, RefreshCcw, Save, MessageSquare, AlertCircle, Play, StopCircle, Zap, Smartphone } from "lucide-react";
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import { googleSheetService, GoogleSheet, TriggerHistory } from "@/services/googleSheetService";
+import { googleSheetService, GoogleSheet, TriggerHistory, Trigger } from "@/services/googleSheetService";
 import { deviceService, Device } from "@/services/deviceService";
 import { campaignService } from "@/services/campaignService";
 import { useModal } from "@/context/ModalContext";
@@ -17,7 +17,7 @@ export default function UnofficialTriggerPage() {
     const [selectedSheetId, setSelectedSheetId] = useState("");
     const [selectedSheet, setSelectedSheet] = useState<GoogleSheet | null>(null);
     const [columns, setColumns] = useState<string[]>([]);
-    const [triggers, setTriggers] = useState<any[]>([]); 
+    const [triggers, setTriggers] = useState<Trigger[]>([]); 
     const [actionLoading, setActionLoading] = useState<string | null>(null); 
     const [refreshLoading, setRefreshLoading] = useState(false); 
     const { showAlert, showConfirm } = useModal();
@@ -77,6 +77,7 @@ export default function UnofficialTriggerPage() {
 
         const historyInterval = setInterval(() => {
             fetchHistory();
+            fetchAllTriggers();
             checkPollingStatus();
         }, 10000);
 
@@ -431,7 +432,7 @@ export default function UnofficialTriggerPage() {
     };
 
     const handleDeleteTrigger = async (trigger: any) => {
-        const triggerId = trigger.trigger_id || trigger.id;
+        const triggerId = trigger.trigger_id;
         const isCampaign = !!trigger.is_campaign;
 
         showConfirm(
@@ -539,62 +540,108 @@ export default function UnofficialTriggerPage() {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trigger Type</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {triggers.map((trigger) => (
-                                    <tr key={trigger.trigger_id}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {trigger.sheet_name || "File Upload"}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                                            {trigger.trigger_type.replace(/_/g, " ")}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {trigger.multi_device_ids && trigger.multi_device_ids.length > 0 
-                                                ? `${trigger.multi_device_ids.length} Devices (RR)` 
-                                                : allDevices.find(d => d.device_id === (trigger.device_id || trigger.device_name))?.device_name || trigger.device_name || "Official API"}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${trigger.is_enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                {trigger.is_enabled ? "Running" : "Stopped"}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
-                                            {!trigger.is_enabled ? (
+                                {triggers.map((trigger) => {
+                                    const progress = trigger.total_rows && trigger.total_rows > 0
+                                        ? Math.round((trigger.processed_rows || 0) / trigger.total_rows * 100)
+                                        : 0;
+                                    
+                                    const getStatusBadge = () => {
+                                        if (trigger.completion_status === "running") {
+                                            return (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                    Running
+                                                </span>
+                                            );
+                                        } else if (trigger.completion_status === "completed") {
+                                            return (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                    <CheckCircle className="w-3 h-3" />
+                                                    Completed
+                                                </span>
+                                            );
+                                        } else {
+                                            return (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                    <Clock className="w-3 h-3" />
+                                                    Pending
+                                                </span>
+                                            );
+                                        }
+                                    };
+                                    
+                                    return (
+                                        <tr key={trigger.trigger_id}>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                {trigger.sheet_name || "File Upload"}
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                                                {trigger.trigger_type.replace(/_/g, " ")}
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center justify-between text-xs">
+                                                        <span className="text-gray-600">
+                                                            {trigger.processed_rows || 0} / {trigger.total_rows || 0} rows
+                                                        </span>
+                                                        <span className="font-medium text-gray-900">{progress}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div 
+                                                            className="bg-emerald-500 h-2 rounded-full transition-all duration-300" 
+                                                            style={{ width: `${progress}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm">
+                                                {getStatusBadge()}
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {trigger.multi_device_ids && trigger.multi_device_ids.length > 0 
+                                                    ? `${trigger.multi_device_ids.length} Devices (RR)` 
+                                                    : allDevices.find(d => d.device_id === (trigger.device_id || trigger.device_name))?.device_name || trigger.device_name || "Official API"}
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
+                                                {!trigger.is_enabled ? (
+                                                    <button
+                                                        onClick={() => handleStartTrigger(trigger.trigger_id)}
+                                                        disabled={actionLoading === trigger.trigger_id}
+                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs disabled:opacity-50 font-bold"
+                                                    >
+                                                        {actionLoading === trigger.trigger_id ? "..." : "Start"}
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleStopTrigger(trigger.trigger_id)}
+                                                        disabled={actionLoading === trigger.trigger_id}
+                                                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs disabled:opacity-50 font-bold"
+                                                    >
+                                                        {actionLoading === trigger.trigger_id ? "..." : "Stop"}
+                                                    </button>
+                                                )}
+                                                
                                                 <button
-                                                    onClick={() => handleStartTrigger(trigger.trigger_id)}
+                                                    onClick={() => handleDeleteTrigger(trigger)}
                                                     disabled={actionLoading === trigger.trigger_id}
-                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs disabled:opacity-50 font-bold"
+                                                    className="bg-gray-100 hover:bg-red-100 text-red-600 p-1.5 rounded disabled:opacity-50 transition-colors"
+                                                    title="Delete Automation"
                                                 >
-                                                    {actionLoading === trigger.trigger_id ? "..." : "Start"}
+                                                    <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleStopTrigger(trigger.trigger_id)}
-                                                    disabled={actionLoading === trigger.trigger_id}
-                                                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs disabled:opacity-50 font-bold"
-                                                >
-                                                    {actionLoading === trigger.trigger_id ? "..." : "Stop"}
-                                                </button>
-                                            )}
-                                            
-                                            <button
-                                                onClick={() => handleDeleteTrigger(trigger)}
-                                                disabled={actionLoading === (trigger.trigger_id || trigger.id)}
-                                                className="bg-gray-100 hover:bg-red-100 text-red-600 p-1.5 rounded disabled:opacity-50 transition-colors"
-                                                title="Delete Automation"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

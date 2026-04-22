@@ -115,7 +115,7 @@ export function UserSidebar({ collapsed, toggleSidebar }: SidebarProps) {
                 {!collapsed && (
                     <>
                         <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center shrink-0 shadow-sm">
+                            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center shrink-0 shadow-sm">
                                 <MessageCircle className="w-4 h-4 text-white" />
                             </div>
                             <div className="min-w-0">
@@ -129,7 +129,7 @@ export function UserSidebar({ collapsed, toggleSidebar }: SidebarProps) {
                     </>
                 )}
                 {collapsed && (
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center shadow-sm">
+                    <div className="w-8 h-8 rounded-xl bg-linear-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center shadow-sm">
                         <MessageCircle className="w-4 h-4 text-white" />
                     </div>
                 )}
@@ -242,7 +242,7 @@ export function UserSidebar({ collapsed, toggleSidebar }: SidebarProps) {
                     <>
                         <Link href="/dashboard/user/profile"
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-800/60 transition-colors group">
-                            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center text-xs font-bold text-white shrink-0">
+                            <div className="h-8 w-8 rounded-xl bg-linear-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center text-xs font-bold text-white shrink-0">
                                 U
                             </div>
                             <div className="flex-1 min-w-0">
@@ -263,7 +263,7 @@ export function UserSidebar({ collapsed, toggleSidebar }: SidebarProps) {
                 ) : (
                     <div className="flex flex-col items-center gap-2 py-1">
                         <Link href="/dashboard/user/profile" title="Profile">
-                            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center text-xs font-bold text-white cursor-pointer hover:opacity-80 transition-opacity">
+                            <div className="h-8 w-8 rounded-xl bg-linear-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center text-xs font-bold text-white cursor-pointer hover:opacity-80 transition-opacity">
                                 U
                             </div>
                         </Link>

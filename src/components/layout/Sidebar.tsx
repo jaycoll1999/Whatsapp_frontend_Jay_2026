@@ -102,7 +102,7 @@ export function Sidebar({ collapsed, toggleSidebar }: SidebarProps) {
                 {!collapsed && (
                     <>
                         <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center shrink-0 shadow-sm shadow-teal-200">
+                            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center shrink-0 shadow-sm shadow-teal-200">
                                 <MessageSquare className="w-4 h-4 text-white" />
                             </div>
                             <div className="min-w-0">
@@ -128,7 +128,7 @@ export function Sidebar({ collapsed, toggleSidebar }: SidebarProps) {
                 )}
 
                 {collapsed && (
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center shadow-sm shadow-teal-200">
+                    <div className="w-8 h-8 rounded-xl bg-linear-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center shadow-sm shadow-teal-200">
                         <MessageSquare className="w-4 h-4 text-white" />
                     </div>
                 )}
@@ -201,7 +201,7 @@ export function Sidebar({ collapsed, toggleSidebar }: SidebarProps) {
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors group"
                         >
                             <Avatar className="h-8 w-8 shrink-0">
-                                <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-[#128C7E] to-[#25D366] text-white">
+                                <AvatarFallback className="text-xs font-bold bg-linear-to-br from-[#128C7E] to-[#25D366] text-white">
                                     {initials}
                                 </AvatarFallback>
                             </Avatar>
@@ -224,7 +224,7 @@ export function Sidebar({ collapsed, toggleSidebar }: SidebarProps) {
                     <div className="flex flex-col items-center gap-2 py-1">
                         <Link href="/dashboard/reseller/profile" title="Profile">
                             <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
-                                <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-[#128C7E] to-[#25D366] text-white">
+                                <AvatarFallback className="text-xs font-bold bg-linear-to-br from-[#128C7E] to-[#25D366] text-white">
                                     {initials}
                                 </AvatarFallback>
                             </Avatar>

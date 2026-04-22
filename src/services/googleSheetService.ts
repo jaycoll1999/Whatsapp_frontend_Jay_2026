@@ -34,6 +34,37 @@ export interface TriggerHistory {
     official_message_id?: string;
 }
 
+export interface Trigger {
+    trigger_id: string;
+    sheet_id?: string;
+    device_id?: string;
+    trigger_type: string;
+    is_enabled: boolean;
+    last_triggered_at?: string;
+    created_at?: string;
+    device_name?: string;
+    sheet_name?: string;
+    phone_column?: string;
+    status_column?: string;
+    trigger_column?: string;
+    trigger_value?: string;
+    message_template?: string;
+    send_time_column?: string;
+    message_column?: string;
+    webhook_url?: string;
+    scheduled_at?: string;
+    source_type?: string;
+    media_url?: string;
+    media_type?: string;
+    multi_device_ids?: string[];
+    multi_templates?: string[];
+    trigger_config?: any;
+    // 🔥 NEW: Trigger statistics
+    total_rows?: number;
+    processed_rows?: number;
+    completion_status?: string; // "pending", "running", "completed"
+}
+
 export const googleSheetService = {
     listSheets: async () => {
         const response = await api.get<GoogleSheet[]>('google-sheets/');
@@ -86,7 +117,7 @@ export const googleSheetService = {
     },
 
     listAllTriggers: async () => {
-        const response = await api.get(`google-sheets/triggers/all`);
+        const response = await api.get<Trigger[]>(`google-sheets/triggers/all`);
         return response.data;
     },
 

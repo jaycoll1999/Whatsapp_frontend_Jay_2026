@@ -63,7 +63,9 @@ export const usePlanStatus = () => {
             const expiryDate = expiryStr ? new Date(expiryStr) : null;
             const planName = profileData?.plan_name || null;
 
-            const isExpired = expiryDate ? expiryDate < new Date() : true;
+            // 🔥 FIX: If there's no expiry date but user has credits, consider plan valid
+            // This handles cases where plan_expiry wasn't set properly during purchase
+            const isExpired = expiryDate ? expiryDate < new Date() : false;
             const hasNoCredits = credits <= 0;
 
             // isValid means they can use the system
@@ -71,7 +73,9 @@ export const usePlanStatus = () => {
             // Business users are restricted by both
             let isValid = true;
             if (role === 'business_owner' || role === 'user') {
-                isValid = !isExpired && !hasNoCredits;
+                // If user has credits and plan_name, consider valid even if expiry is missing
+                const hasPlan = planName !== null && planName !== '';
+                isValid = (!isExpired || !expiryDate) && !hasNoCredits && hasPlan;
             } else if (role === 'reseller') {
                 // Resellers can login and move around, but check_reseller_plan on backend protects allocation
                 isValid = credits > 0;
