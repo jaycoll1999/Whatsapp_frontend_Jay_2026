@@ -362,11 +362,8 @@ function CheckoutContent() {
                              {/* Allocation Logic for Admins/Resellers */}
                              {(userRole === 'reseller' || userRole === 'admin') && (
                                 <div className="space-y-3 md:col-span-2 animate-in slide-in-from-top-2 duration-500">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                                         Allocate Plan To
-                                        <Badge variant="outline" className="text-[8px] font-black uppercase text-blue-600 bg-blue-50 border-blue-100">
-                                            {resellerPlans.find(p => p.name === planName) ? "Resellers Only" : "Business Users Only"}
-                                        </Badge>
                                     </label>
                                     <Select 
                                         value={formData.allocate_to_user_id} 
