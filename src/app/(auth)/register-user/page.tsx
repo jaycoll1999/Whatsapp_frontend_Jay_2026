@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { UserPlus, User, Mail, Phone, Lock, Building2, FileText, CreditCard, MapPin, Hash, Eye, EyeOff, Loader2, AlertCircle, Coins, MessageSquare, Users } from "lucide-react"
 import userService from "@/services/userService"
+import CountrySearchDropdown from "@/components/ui/country-search-dropdown"
 
 function UserRegisterForm() {
     const router = useRouter()
@@ -16,6 +17,10 @@ function UserRegisterForm() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    
+    // Validation state
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+    const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({})
 
     useEffect(() => {
         if (resellerIdFromUrl) {
@@ -59,26 +64,155 @@ function UserRegisterForm() {
     })
 
     const [confirmPassword, setConfirmPassword] = useState("")
+    
+    // Validation functions
+    const validateEmail = (email: string) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        return emailRegex.test(email)
+    }
+    
+    const validatePhone = (phone: string) => {
+        const phoneRegex = /^[6-9]\d{9}$/
+        return phoneRegex.test(phone.replace(/\s/g, ''))
+    }
+    
+    const validatePassword = (password: string) => {
+        if (password.length < 8) return "Password must be at least 8 characters"
+        if (!/(?=.*[a-z])/.test(password)) return "Password must contain at least one lowercase letter"
+        if (!/(?=.*[A-Z])/.test(password)) return "Password must contain at least one uppercase letter"
+        if (!/(?=.*\d)/.test(password)) return "Password must contain at least one number"
+        if (!/(?=.*[@$!%*?&])/.test(password)) return "Password must contain at least one special character"
+        return ""
+    }
+    
+    const validateGSTIN = (gstin: string) => {
+        if (!gstin) return "" // Optional field
+        const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+        return gstinRegex.test(gstin) ? "" : "Invalid GSTIN format"
+    }
+    
+    const validatePincode = (pincode: string) => {
+        if (!pincode) return "" // Optional field
+        const pincodeRegex = /^[1-9][0-9]{5}$/
+        return pincodeRegex.test(pincode) ? "" : "Invalid pincode format"
+    }
+    
+    const validateField = (fieldName: string, value: string) => {
+        const errors: Record<string, string> = {}
+        
+        switch (fieldName) {
+            case 'name':
+                if (!value.trim()) errors.name = "Full name is required"
+                else if (value.trim().length < 3) errors.name = "Name must be at least 3 characters"
+                break
+            case 'username':
+                if (!value.trim()) errors.username = "Username is required"
+                else if (value.length < 3) errors.username = "Username must be at least 3 characters"
+                else if (!/^[a-zA-Z0-9_]+$/.test(value)) errors.username = "Username can only contain letters, numbers, and underscores"
+                break
+            case 'email':
+                if (!value.trim()) errors.email = "Email is required"
+                else if (!validateEmail(value)) errors.email = "Invalid email format"
+                break
+            case 'phone':
+                if (!value.trim()) errors.phone = "Phone number is required"
+                else if (!validatePhone(value)) errors.phone = "Invalid Indian mobile number (10 digits starting with 6-9)"
+                break
+            case 'password':
+                const passwordError = validatePassword(value)
+                if (passwordError) errors.password = passwordError
+                break
+            case 'business_name':
+                if (!value.trim()) errors.business_name = "Business name is required"
+                break
+            case 'gstin':
+                const gstinError = validateGSTIN(value)
+                if (gstinError) errors.gstin = gstinError
+                break
+            case 'pincode':
+                const pincodeError = validatePincode(value)
+                if (pincodeError) errors.pincode = pincodeError
+                break
+            case 'confirmPassword':
+                if (!value) errors.confirmPassword = "Please confirm your password"
+                else if (value !== formData.profile.password) errors.confirmPassword = "Passwords do not match"
+                break
+        }
+        
+        return errors
+    }
+    
+    const handleFieldBlur = (fieldName: string, value: string) => {
+        setTouchedFields(prev => ({ ...prev, [fieldName]: true }))
+        const errors = validateField(fieldName, value)
+        setFieldErrors(prev => ({ ...prev, ...errors }))
+    }
+    
+    const validateForm = () => {
+        const allErrors: Record<string, string> = {}
+        
+        // Validate all required fields
+        allErrors['name'] = validateField('name', formData.profile.name).name || ''
+        allErrors['username'] = validateField('username', formData.profile.username).username || ''
+        allErrors['email'] = validateField('email', formData.profile.email).email || ''
+        allErrors['phone'] = validateField('phone', formData.profile.phone).phone || ''
+        allErrors['password'] = validateField('password', formData.profile.password).password || ''
+        allErrors['business_name'] = validateField('business_name', formData.business.business_name).business_name || ''
+        allErrors['confirmPassword'] = validateField('confirmPassword', confirmPassword).confirmPassword || ''
+        
+        // Validate optional fields if they have values
+        const gstinError = validateField('gstin', formData.business.gstin).gstin
+        if (gstinError) allErrors['gstin'] = gstinError
+        
+        const pincodeError = validateField('pincode', formData.address.pincode).pincode
+        if (pincodeError) allErrors['pincode'] = pincodeError
+        
+        setFieldErrors(allErrors)
+        setTouchedFields(Object.keys(allErrors).reduce((acc, key) => ({ ...acc, [key]: true }), {}))
+        
+        return Object.values(allErrors).every(error => !error)
+    }
 
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
         setFormData({
             ...formData,
-            profile: { ...formData.profile, [e.target.name]: e.target.value }
+            profile: { ...formData.profile, [name]: value }
         })
+        
+        // Real-time validation for touched fields
+        if (touchedFields[name]) {
+            const errors = validateField(name, value)
+            setFieldErrors(prev => ({ ...prev, ...errors }))
+        }
     }
 
     const handleBusinessChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target
         setFormData({
             ...formData,
-            business: { ...formData.business, [e.target.name]: e.target.value }
+            business: { ...formData.business, [name]: value }
         })
+        
+        // Real-time validation for touched fields
+        if (touchedFields[name]) {
+            const errors = validateField(name, value)
+            setFieldErrors(prev => ({ ...prev, ...errors }))
+        }
     }
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
         setFormData({
             ...formData,
-            address: { ...formData.address, [e.target.name]: e.target.value }
+            address: { ...formData.address, [name]: value }
         })
+        
+        // Real-time validation for touched fields
+        if (touchedFields[name]) {
+            const errors = validateField(name, value)
+            setFieldErrors(prev => ({ ...prev, ...errors }))
+        }
     }
 
     const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -92,16 +226,28 @@ function UserRegisterForm() {
         })
     }
 
+    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        setConfirmPassword(value)
+        
+        // Real-time validation for touched fields
+        if (touchedFields.confirmPassword) {
+            const errors = validateField('confirmPassword', value)
+            setFieldErrors(prev => ({ ...prev, ...errors }))
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError(null)
-        setIsLoading(true)
-
-        if (formData.profile.password !== confirmPassword) {
-            setError("Passwords do not match")
-            setIsLoading(false)
+        
+        // Validate all fields
+        if (!validateForm()) {
+            setError("Please fix the validation errors before submitting")
             return
         }
+        
+        setIsLoading(true)
 
         try {
             // Reconstruct data with parent context
@@ -115,7 +261,7 @@ function UserRegisterForm() {
             
             await userService.registerUser(registrationData)
             
-            router.push("/login?registered=true")
+            router.push("/login?registered=true&type=business")
         } catch (err: any) {
             console.error("Registration error:", err)
             setError(err.response?.data?.detail || "Registration failed. Please try again.")
@@ -185,12 +331,16 @@ function UserRegisterForm() {
                                                 type="text"
                                                 name="name"
                                                 placeholder="Full Name"
-                                                className="input-field-compact"
+                                                className={`input-field-compact ${fieldErrors.name && touchedFields.name ? 'border-red-500 focus:border-red-500' : ''}`}
                                                 required
                                                 value={formData.profile.name}
                                                 onChange={handleProfileChange}
+                                                onBlur={(e) => handleFieldBlur('name', e.target.value)}
                                             />
                                         </div>
+                                        {fieldErrors.name && touchedFields.name && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.name}</p>
+                                        )}
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-semibold text-gray-700 ml-1">Username *</label>
@@ -200,12 +350,16 @@ function UserRegisterForm() {
                                                 type="text"
                                                 name="username"
                                                 placeholder="Username"
-                                                className="input-field-compact"
+                                                className={`input-field-compact ${fieldErrors.username && touchedFields.username ? 'border-red-500 focus:border-red-500' : ''}`}
                                                 required
                                                 value={formData.profile.username}
                                                 onChange={handleProfileChange}
+                                                onBlur={(e) => handleFieldBlur('username', e.target.value)}
                                             />
                                         </div>
+                                        {fieldErrors.username && touchedFields.username && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.username}</p>
+                                        )}
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-semibold text-gray-700 ml-1">Email *</label>
@@ -215,12 +369,16 @@ function UserRegisterForm() {
                                                 type="email"
                                                 name="email"
                                                 placeholder="Email Address"
-                                                className="input-field-compact"
+                                                className={`input-field-compact ${fieldErrors.email && touchedFields.email ? 'border-red-500 focus:border-red-500' : ''}`}
                                                 required
                                                 value={formData.profile.email}
                                                 onChange={handleProfileChange}
+                                                onBlur={(e) => handleFieldBlur('email', e.target.value)}
                                             />
                                         </div>
+                                        {fieldErrors.email && touchedFields.email && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.email}</p>
+                                        )}
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-semibold text-gray-700 ml-1">Phone *</label>
@@ -230,12 +388,16 @@ function UserRegisterForm() {
                                                 type="tel"
                                                 name="phone"
                                                 placeholder="Mobile Number"
-                                                className="input-field-compact"
+                                                className={`input-field-compact ${fieldErrors.phone && touchedFields.phone ? 'border-red-500 focus:border-red-500' : ''}`}
                                                 required
                                                 value={formData.profile.phone}
                                                 onChange={handleProfileChange}
+                                                onBlur={(e) => handleFieldBlur('phone', e.target.value)}
                                             />
                                         </div>
+                                        {fieldErrors.phone && touchedFields.phone && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.phone}</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -255,12 +417,16 @@ function UserRegisterForm() {
                                                 type="text"
                                                 name="business_name"
                                                 placeholder="Business Name"
-                                                className="input-field-compact"
+                                                className={`input-field-compact ${fieldErrors.business_name && touchedFields.business_name ? 'border-red-500 focus:border-red-500' : ''}`}
                                                 required
                                                 value={formData.business.business_name}
                                                 onChange={handleBusinessChange}
+                                                onBlur={(e) => handleFieldBlur('business_name', e.target.value)}
                                             />
                                         </div>
+                                        {fieldErrors.business_name && touchedFields.business_name && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.business_name}</p>
+                                        )}
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-semibold text-gray-700 ml-1">GSTIN</label>
@@ -270,11 +436,15 @@ function UserRegisterForm() {
                                                 type="text"
                                                 name="gstin"
                                                 placeholder="GSTIN (Optional)"
-                                                className="input-field-compact"
+                                                className={`input-field-compact ${fieldErrors.gstin && touchedFields.gstin ? 'border-red-500 focus:border-red-500' : ''}`}
                                                 value={formData.business.gstin}
                                                 onChange={handleBusinessChange}
+                                                onBlur={(e) => handleFieldBlur('gstin', e.target.value)}
                                             />
                                         </div>
+                                        {fieldErrors.gstin && touchedFields.gstin && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.gstin}</p>
+                                        )}
                                     </div>
                                     <div className="space-y-1 md:col-span-2">
                                         <label className="text-xs font-semibold text-gray-700 ml-1">Description</label>
@@ -339,13 +509,13 @@ function UserRegisterForm() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
                                             <label className="text-xs font-semibold text-gray-700 ml-1">Country</label>
-                                            <input
-                                                type="text"
-                                                name="country"
-                                                placeholder="Country"
-                                                className="input-field-compact pl-4!"
+                                            <CountrySearchDropdown
                                                 value={formData.address.country}
-                                                onChange={handleAddressChange}
+                                                onChange={(value) => setFormData({
+                                                    ...formData,
+                                                    address: { ...formData.address, country: value }
+                                                })}
+                                                placeholder="Search country..."
                                             />
                                         </div>
                                         <div className="space-y-1">
@@ -354,10 +524,14 @@ function UserRegisterForm() {
                                                 type="text"
                                                 name="pincode"
                                                 placeholder="Pincode"
-                                                className="input-field-compact pl-4!"
+                                                className={`input-field-compact pl-4! ${fieldErrors.pincode && touchedFields.pincode ? 'border-red-500 focus:border-red-500' : ''}`}
                                                 value={formData.address.pincode}
                                                 onChange={handleAddressChange}
+                                                onBlur={(e) => handleFieldBlur('pincode', e.target.value)}
                                             />
+                                            {fieldErrors.pincode && touchedFields.pincode && (
+                                                <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.pincode}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -403,15 +577,19 @@ function UserRegisterForm() {
                                                 type={showPassword ? "text" : "password"}
                                                 name="password"
                                                 placeholder="Password"
-                                                className="input-field-compact pr-10"
+                                                className={`input-field-compact pr-10 ${fieldErrors.password && touchedFields.password ? 'border-red-500 focus:border-red-500' : ''}`}
                                                 required
                                                 value={formData.profile.password}
                                                 onChange={handleProfileChange}
+                                                onBlur={(e) => handleFieldBlur('password', e.target.value)}
                                             />
                                             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors">
                                                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                             </button>
                                         </div>
+                                        {fieldErrors.password && touchedFields.password && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.password}</p>
+                                        )}
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-semibold text-gray-700 ml-1">Confirm *</label>
@@ -420,15 +598,19 @@ function UserRegisterForm() {
                                             <input
                                                 type={showConfirmPassword ? "text" : "password"}
                                                 placeholder="Confirm Password"
-                                                className="input-field-compact pr-10"
+                                                className={`input-field-compact pr-10 ${fieldErrors.confirmPassword && touchedFields.confirmPassword ? 'border-red-500 focus:border-red-500' : ''}`}
                                                 required
                                                 value={confirmPassword}
-                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                onChange={handleConfirmPasswordChange}
+                                                onBlur={(e) => handleFieldBlur('confirmPassword', e.target.value)}
                                             />
                                             <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors">
                                                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                             </button>
                                         </div>
+                                        {fieldErrors.confirmPassword && touchedFields.confirmPassword && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.confirmPassword}</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>

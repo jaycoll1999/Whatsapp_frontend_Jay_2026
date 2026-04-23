@@ -15,7 +15,8 @@ import {
     FileText, 
     ShoppingCart, 
     Users, 
-    Crown 
+    Crown,
+    AlertTriangle 
 } from "lucide-react"
 import Script from "next/script"
 import { resellerPlans, userPlans } from "@/data/plansData"
@@ -24,6 +25,7 @@ import { Badge } from "@/components/ui/badge"
 import creditService from "@/services/creditService"
 import { businessService } from "@/services/businessService"
 import { usePlans } from "@/hooks/usePlans"
+import { usePlanStatus } from "@/hooks/usePlanStatus"
 import {
     Select,
     SelectContent,
@@ -31,6 +33,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 
 declare global {
     interface Window {
@@ -55,6 +65,7 @@ function CheckoutContent() {
     })
     const [businessUsers, setBusinessUsers] = useState<any[]>([])
     const [userRole, setUserRole] = useState<string | null>(null)
+    const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false)
     
     const [billingData, setBillingData] = useState({
         grossAmount: 0,
@@ -65,6 +76,9 @@ function CheckoutContent() {
 
     // Fetch dynamic plans from the backend
     const { plans: allPlans, isLoading: isPlansLoading } = usePlans('ALL')
+    
+    // Check for active plan status
+    const { creditsRemaining, planName: currentPlanName, isValid: hasActivePlan } = usePlanStatus()
 
     // Find the plan details
     const selectedPlan = allPlans.find(p => p.name === planName)
@@ -163,6 +177,20 @@ function CheckoutContent() {
             return;
         }
 
+        // Check if user has an active plan with remaining credits
+        // Only show confirmation if they have credits remaining (not just an expired plan)
+        if (hasActivePlan && creditsRemaining > 0 && currentPlanName) {
+            setShowUpgradeConfirm(true);
+            return;
+        }
+
+        proceedWithPayment();
+    }
+
+    const proceedWithPayment = async () => {
+        if (!selectedPlan) return;
+        
+        setShowUpgradeConfirm(false);
         setIsLoading(true)
         try {
             const token = localStorage.getItem('token')
@@ -244,7 +272,7 @@ function CheckoutContent() {
     // Removed static calculations
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-50/50 via-white to-white pb-20">
+        <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-indigo-50/50 via-white to-white pb-20">
             <div className="max-w-4xl mx-auto py-12 px-6">
                 {/* Header Section */}
                 <div className="flex flex-col items-center text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
@@ -510,6 +538,47 @@ function CheckoutContent() {
                 </Card>
                 </div>
             </div>
+
+            {/* Plan Upgrade Confirmation Dialog */}
+            <Dialog open={showUpgradeConfirm} onOpenChange={setShowUpgradeConfirm}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-amber-50 rounded-full border border-amber-200">
+                                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                            </div>
+                            <DialogTitle className="text-lg font-semibold text-amber-900">
+                                Plan Upgrade Warning
+                            </DialogTitle>
+                        </div>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <p className="text-amber-900 font-medium text-sm">
+                                You have an active plan with <span className="font-bold text-amber-700">{creditsRemaining.toLocaleString()}</span> credits remaining
+                            </p>
+                        </div>
+                        <DialogDescription className="text-gray-700 text-sm leading-relaxed">
+                            Purchasing a new plan will <span className="font-bold text-red-600">remove your existing credits</span> and replace them with the new plan credits. This action cannot be undone.
+                        </DialogDescription>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowUpgradeConfirm(false)}
+                            className="flex-1 sm:flex-none border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={proceedWithPayment}
+                            className="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+                        >
+                            Confirm & Proceed
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

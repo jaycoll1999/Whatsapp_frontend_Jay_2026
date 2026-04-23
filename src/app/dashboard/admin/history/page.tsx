@@ -45,7 +45,7 @@ export default function AdminActivityHistoryPage() {
     const [stats, setStats] = useState({
         total: 0,
         filtered: 0,
-        daysSinceLast: "0d"
+        daysSinceLast: 0
     })
     const [filters, setFilters] = useState({
         module: "all",
@@ -105,7 +105,7 @@ export default function AdminActivityHistoryPage() {
             setStats({
                 total: data.total,
                 filtered: data.filtered,
-                daysSinceLast: `${data.last_activity_days_ago || 0}d`
+                daysSinceLast: data.last_activity_days_ago || 0
             })
         } catch (error) {
             console.error("Failed to fetch logs:", error)

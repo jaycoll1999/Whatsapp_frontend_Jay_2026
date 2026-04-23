@@ -7,13 +7,22 @@ import {
     Loader2, ShieldCheck, Calendar, CreditCard, 
     Zap, CheckCircle2, AlertCircle, ArrowRight,
     Sparkles, Info, Star, Clock, UserCheck, Layout, Gift, 
-    ShoppingCart, X, Check, Mail, Phone, Building2
+    ShoppingCart, X, Check, Mail, Phone, Building2, AlertTriangle
 } from "lucide-react"
 import Script from "next/script"
 import { Button } from "@/components/ui/button"
 import businessService from "@/services/businessService"
 import creditService from "@/services/creditService"
 import { cn } from "@/lib/utils"
+import { usePlanStatus } from "@/hooks/usePlanStatus"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 
 interface Plan {
     plan_id: string
@@ -61,9 +70,13 @@ export default function PlansPage() {
     const [selectedPlan, setSelectedPlan] = useState<any | null>(null)
     const [isProcessing, setIsProcessing] = useState(false)
     const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+    const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false)
     const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'initiating' | 'paying' | 'verifying' | 'success' | 'error'>('idle')
     const [checkoutMessage, setCheckoutMessage] = useState("")
     const [isMounted, setIsMounted] = useState(false)
+    
+    // Check for active plan status
+    const { creditsRemaining, planName: currentPlanName, isValid: hasActivePlan } = usePlanStatus()
     
     const [formData, setFormData] = useState({
         name: "",
@@ -133,6 +146,19 @@ export default function PlansPage() {
 
     const handlePurchaseInitiate = (plan: Plan) => {
         setSelectedPlan(plan)
+        
+        // Check if user has an active plan with remaining credits
+        // Only show confirmation if they have credits remaining (not just an expired plan)
+        if (hasActivePlan && creditsRemaining > 0 && currentPlanName) {
+            setShowUpgradeConfirm(true)
+        } else {
+            setShowCheckoutModal(true)
+            setCheckoutStatus('idle')
+        }
+    }
+
+    const handleUpgradeConfirm = () => {
+        setShowUpgradeConfirm(false)
         setShowCheckoutModal(true)
         setCheckoutStatus('idle')
     }
@@ -650,6 +676,47 @@ export default function PlansPage() {
                     </p>
                 </div>
             </div>
+
+            {/* Plan Upgrade Confirmation Dialog */}
+            <Dialog open={showUpgradeConfirm} onOpenChange={setShowUpgradeConfirm}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-amber-50 rounded-full border border-amber-200">
+                                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                            </div>
+                            <DialogTitle className="text-lg font-semibold text-amber-900">
+                                Plan Upgrade Warning
+                            </DialogTitle>
+                        </div>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <p className="text-amber-900 font-medium text-sm">
+                                You have an active plan with <span className="font-bold text-amber-700">{creditsRemaining.toLocaleString()}</span> credits remaining
+                            </p>
+                        </div>
+                        <DialogDescription className="text-gray-700 text-sm leading-relaxed">
+                            Purchasing a new plan will <span className="font-bold text-red-600">remove your existing credits</span> and replace them with the new plan credits. This action cannot be undone.
+                        </DialogDescription>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowUpgradeConfirm(false)}
+                            className="flex-1 sm:flex-none border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleUpgradeConfirm}
+                            className="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+                        >
+                            Confirm & Proceed
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
         </div>
     )

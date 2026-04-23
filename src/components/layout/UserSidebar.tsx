@@ -85,11 +85,13 @@ export function UserSidebar({ collapsed, toggleSidebar }: SidebarProps) {
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
     const [userId, setUserId] = useState<string | null>(null)
     const [userName, setUserName] = useState<string>("User")
+    const [userEmail, setUserEmail] = useState<string | null>(null)
 
     useEffect(() => {
         if (authUser) {
             setUserId(authUser.id)
-            setUserName(authUser.name)
+            setUserName(authUser.name || "Guest")
+            setUserEmail(authUser.email)
         }
     }, [authUser])
     
@@ -243,12 +245,12 @@ export function UserSidebar({ collapsed, toggleSidebar }: SidebarProps) {
                         <Link href="/dashboard/user/profile"
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-800/60 transition-colors group">
                             <div className="h-8 w-8 rounded-xl bg-linear-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center text-xs font-bold text-white shrink-0">
-                                U
+                                {userName.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-semibold text-slate-300 truncate leading-tight">User</p>
-                                <p className="text-[11px] text-slate-600 truncate font-mono leading-tight">
-                                    {userId ? userId.substring(0, 16) + "…" : "—"}
+                                <p className="text-[13px] font-bold text-slate-300 truncate leading-tight">{userName}</p>
+                                <p className="text-[11px] text-slate-500 truncate leading-tight">
+                                    {userEmail || "guest@example.com"}
                                 </p>
                             </div>
                         </Link>
@@ -264,7 +266,7 @@ export function UserSidebar({ collapsed, toggleSidebar }: SidebarProps) {
                     <div className="flex flex-col items-center gap-2 py-1">
                         <Link href="/dashboard/user/profile" title="Profile">
                             <div className="h-8 w-8 rounded-xl bg-linear-to-br from-[#128C7E] to-[#25D366] flex items-center justify-center text-xs font-bold text-white cursor-pointer hover:opacity-80 transition-opacity">
-                                U
+                                {userName.charAt(0).toUpperCase()}
                             </div>
                         </Link>
                         <button

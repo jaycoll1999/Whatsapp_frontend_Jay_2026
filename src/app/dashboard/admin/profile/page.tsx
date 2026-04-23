@@ -77,7 +77,7 @@ export default function AdminProfilePage() {
             // Update local state with new image URL
             setAdminData((prev: any) => ({
                 ...prev,
-                profile_image_url: result.profile_image_url
+                profile_image: result.profile_image_url
             }));
         } catch (error) {
             console.error("Failed to upload image", error);
@@ -120,8 +120,8 @@ export default function AdminProfilePage() {
                 <div className="flex flex-col md:flex-row gap-6 items-center md:items-start text-center md:text-left">
                     <div className="relative group">
                         <Avatar className="w-32 h-32 border-4 border-white shadow-2xl ring-2 ring-indigo-500/20 transition-transform group-hover:scale-105 duration-300 overflow-hidden">
-                            <AvatarImage src={getImageUrl(adminData.profile_image_url)} className="object-cover" />
-                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-4xl font-bold">
+                            <AvatarImage src={getImageUrl(adminData.profile_image)} className="object-cover" />
+                            <AvatarFallback className="bg-linear-to-br from-indigo-500 to-purple-600 text-white text-4xl font-bold">
                                 {adminData.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'AD'}
                             </AvatarFallback>
                             {uploading && (

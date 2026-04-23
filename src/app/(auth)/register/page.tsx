@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { UserPlus, User, Mail, Phone, Lock, Building2, FileText, CreditCard, MapPin, Hash, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
 import resellerService, { ResellerRegisterData } from "@/services/resellerService"
+import CountrySearchDropdown from "@/components/ui/country-search-dropdown"
 
 export default function RegisterPage() {
     const router = useRouter()
@@ -12,6 +13,10 @@ export default function RegisterPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    
+    // Validation state
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+    const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({})
 
     // Form State
     const [formData, setFormData] = useState<ResellerRegisterData>({
@@ -40,45 +45,207 @@ export default function RegisterPage() {
 
     const [confirmPassword, setConfirmPassword] = useState("")
     const [username, setUsername] = useState("")
+    
+    // Validation functions
+    const validateEmail = (email: string) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        return emailRegex.test(email)
+    }
+    
+    const validatePhone = (phone: string) => {
+        const phoneRegex = /^[6-9]\d{9}$/
+        return phoneRegex.test(phone.replace(/\s/g, ''))
+    }
+    
+    const validatePassword = (password: string) => {
+        if (password.length < 8) return "Password must be at least 8 characters"
+        if (!/(?=.*[a-z])/.test(password)) return "Password must contain at least one lowercase letter"
+        if (!/(?=.*[A-Z])/.test(password)) return "Password must contain at least one uppercase letter"
+        if (!/(?=.*\d)/.test(password)) return "Password must contain at least one number"
+        if (!/(?=.*[@$!%*?&])/.test(password)) return "Password must contain at least one special character"
+        return ""
+    }
+    
+    const validateGSTIN = (gstin: string) => {
+        if (!gstin) return "" // Optional field
+        const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+        return gstinRegex.test(gstin) ? "" : "Invalid GSTIN format"
+    }
+    
+    const validatePincode = (pincode: string) => {
+        if (!pincode) return "" // Optional field
+        const pincodeRegex = /^[1-9][0-9]{5}$/
+        return pincodeRegex.test(pincode) ? "" : "Invalid pincode format"
+    }
+    
+    const validateField = (fieldName: string, value: string) => {
+        const errors: Record<string, string> = {}
+        
+        switch (fieldName) {
+            case 'name':
+                if (!value.trim()) errors.name = "Full name is required"
+                else if (value.trim().length < 3) errors.name = "Name must be at least 3 characters"
+                break
+            case 'username':
+                if (!value.trim()) errors.username = "Username is required"
+                else if (value.length < 3) errors.username = "Username must be at least 3 characters"
+                else if (!/^[a-zA-Z0-9_]+$/.test(value)) errors.username = "Username can only contain letters, numbers, and underscores"
+                break
+            case 'email':
+                if (!value.trim()) errors.email = "Email is required"
+                else if (!validateEmail(value)) errors.email = "Invalid email format"
+                break
+            case 'phone':
+                if (!value.trim()) errors.phone = "Phone number is required"
+                else if (!validatePhone(value)) errors.phone = "Invalid Indian mobile number (10 digits starting with 6-9)"
+                break
+            case 'password':
+                const passwordError = validatePassword(value)
+                if (passwordError) errors.password = passwordError
+                break
+            case 'business_name':
+                if (!value.trim()) errors.business_name = "Business name is required"
+                break
+            case 'gstin':
+                const gstinError = validateGSTIN(value)
+                if (gstinError) errors.gstin = gstinError
+                break
+            case 'pincode':
+                const pincodeError = validatePincode(value)
+                if (pincodeError) errors.pincode = pincodeError
+                break
+            case 'confirmPassword':
+                if (!value) errors.confirmPassword = "Please confirm your password"
+                else if (value !== formData.profile.password) errors.confirmPassword = "Passwords do not match"
+                break
+        }
+        
+        return errors
+    }
+    
+    const handleFieldBlur = (fieldName: string, value: string) => {
+        setTouchedFields(prev => ({ ...prev, [fieldName]: true }))
+        const errors = validateField(fieldName, value)
+        setFieldErrors(prev => ({ ...prev, ...errors }))
+    }
+    
+    const validateForm = () => {
+        const allErrors: Record<string, string> = {}
+        
+        // Extract all values safely
+        const name = formData.profile.name ?? ''
+        const email = formData.profile.email ?? ''
+        const phone = formData.profile.phone ?? ''
+        const password = formData.profile.password ?? ''
+        const businessName = formData.business?.business_name ?? ''
+        const gstin = formData.business?.gstin ?? ''
+        const pincode = formData.address?.pincode ?? ''
+        
+        // Validate all required fields
+        allErrors['name'] = validateField('name', name).name || ''
+        allErrors['username'] = validateField('username', username).username || ''
+        allErrors['email'] = validateField('email', email).email || ''
+        allErrors['phone'] = validateField('phone', phone).phone || ''
+        allErrors['password'] = validateField('password', password).password || ''
+        allErrors['business_name'] = validateField('business_name', businessName).business_name || ''
+        allErrors['confirmPassword'] = validateField('confirmPassword', confirmPassword).confirmPassword || ''
+        
+        // Validate optional fields if they have values
+        const gstinError = validateField('gstin', gstin).gstin
+        if (gstinError) allErrors['gstin'] = gstinError
+        
+        const pincodeError = validateField('pincode', pincode).pincode
+        if (pincodeError) allErrors['pincode'] = pincodeError
+        
+        setFieldErrors(allErrors)
+        setTouchedFields(Object.keys(allErrors).reduce((acc, key) => ({ ...acc, [key]: true }), {}))
+        
+        return Object.values(allErrors).every(error => !error)
+    }
 
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
         setFormData({
             ...formData,
-            profile: { ...formData.profile, [e.target.name]: e.target.value }
+            profile: { ...formData.profile, [name]: value }
         })
+        
+        // Real-time validation for touched fields
+        if (touchedFields[name]) {
+            const errors = validateField(name, value)
+            setFieldErrors(prev => ({ ...prev, ...errors }))
+        }
     }
 
     const handleBusinessChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target
         setFormData({
             ...formData,
-            business: { ...formData.business, [e.target.name]: e.target.value }
+            business: { ...formData.business, [name]: value }
         })
+        
+        // Real-time validation for touched fields
+        if (touchedFields[name]) {
+            const errors = validateField(name, value)
+            setFieldErrors(prev => ({ ...prev, ...errors }))
+        }
     }
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
         setFormData({
             ...formData,
-            address: { ...formData.address, [e.target.name]: e.target.value }
+            address: { ...formData.address, [name]: value }
         })
+        
+        // Real-time validation for touched fields
+        if (touchedFields[name]) {
+            const errors = validateField(name, value)
+            setFieldErrors(prev => ({ ...prev, ...errors }))
+        }
     }
 
     const handleBankChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
         setFormData({
             ...formData,
-            bank: { ...formData.bank, [e.target.name]: e.target.value }
+            bank: { ...formData.bank, [name]: value }
         })
+    }
+    
+    const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        setUsername(value)
+        
+        // Real-time validation for touched fields
+        if (touchedFields.username) {
+            const errors = validateField('username', value)
+            setFieldErrors(prev => ({ ...prev, ...errors }))
+        }
+    }
+    
+    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        setConfirmPassword(value)
+        
+        // Real-time validation for touched fields
+        if (touchedFields.confirmPassword) {
+            const errors = validateField('confirmPassword', value)
+            setFieldErrors(prev => ({ ...prev, ...errors }))
+        }
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError(null)
-        setIsLoading(true)
-
-        if (formData.profile.password !== confirmPassword) {
-            setError("Passwords do not match")
-            setIsLoading(false)
+        
+        // Validate all fields
+        if (!validateForm()) {
+            setError("Please fix the validation errors before submitting")
             return
         }
+        
+        setIsLoading(true)
 
         try {
             const submissionData = {
@@ -90,7 +257,7 @@ export default function RegisterPage() {
             }
 
             await resellerService.register(submissionData)
-            router.push("/login?registered=true")
+            router.push("/login?registered=true&type=reseller")
         } catch (err: any) {
             console.error("Registration error:", err)
             setError(err.response?.data?.detail || "Registration failed. Please try again.")
@@ -143,12 +310,16 @@ export default function RegisterPage() {
                                             type="text"
                                             name="name"
                                             placeholder="Full Name"
-                                            className="input-field-compact"
+                                            className={`input-field-compact ${fieldErrors.name && touchedFields.name ? 'border-red-500 focus:border-red-500' : ''}`}
                                             required
                                             value={formData.profile.name}
                                             onChange={handleProfileChange}
+                                            onBlur={(e) => handleFieldBlur('name', e.target.value)}
                                         />
                                     </div>
+                                    {fieldErrors.name && touchedFields.name && (
+                                        <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.name}</p>
+                                    )}
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-semibold text-gray-700 ml-1">Username</label>
@@ -158,12 +329,16 @@ export default function RegisterPage() {
                                             type="text"
                                             name="username"
                                             placeholder="Username"
-                                            className="input-field-compact"
+                                            className={`input-field-compact ${fieldErrors.username && touchedFields.username ? 'border-red-500 focus:border-red-500' : ''}`}
                                             required
                                             value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
+                                            onChange={handleUsernameChange}
+                                            onBlur={(e) => handleFieldBlur('username', e.target.value)}
                                         />
                                     </div>
+                                    {fieldErrors.username && touchedFields.username && (
+                                        <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.username}</p>
+                                    )}
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-semibold text-gray-700 ml-1">Email</label>
@@ -173,12 +348,16 @@ export default function RegisterPage() {
                                             type="email"
                                             name="email"
                                             placeholder="Email Address"
-                                            className="input-field-compact"
+                                            className={`input-field-compact ${fieldErrors.email && touchedFields.email ? 'border-red-500 focus:border-red-500' : ''}`}
                                             required
                                             value={formData.profile.email}
                                             onChange={handleProfileChange}
+                                            onBlur={(e) => handleFieldBlur('email', e.target.value)}
                                         />
                                     </div>
+                                    {fieldErrors.email && touchedFields.email && (
+                                        <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.email}</p>
+                                    )}
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-semibold text-gray-700 ml-1">Phone</label>
@@ -188,12 +367,16 @@ export default function RegisterPage() {
                                             type="tel"
                                             name="phone"
                                             placeholder="Mobile Number"
-                                            className="input-field-compact"
+                                            className={`input-field-compact ${fieldErrors.phone && touchedFields.phone ? 'border-red-500 focus:border-red-500' : ''}`}
                                             required
                                             value={formData.profile.phone}
                                             onChange={handleProfileChange}
+                                            onBlur={(e) => handleFieldBlur('phone', e.target.value)}
                                         />
                                     </div>
+                                    {fieldErrors.phone && touchedFields.phone && (
+                                        <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.phone}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -213,11 +396,15 @@ export default function RegisterPage() {
                                             type="text"
                                             name="business_name"
                                             placeholder="Business Name"
-                                            className="input-field-compact"
+                                            className={`input-field-compact ${fieldErrors.business_name && touchedFields.business_name ? 'border-red-500 focus:border-red-500' : ''}`}
                                             value={formData.business?.business_name}
                                             onChange={handleBusinessChange}
+                                            onBlur={(e) => handleFieldBlur('business_name', e.target.value)}
                                         />
                                     </div>
+                                    {fieldErrors.business_name && touchedFields.business_name && (
+                                        <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.business_name}</p>
+                                    )}
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-semibold text-gray-700 ml-1">Product/Service</label>
@@ -260,11 +447,15 @@ export default function RegisterPage() {
                                             type="text"
                                             name="gstin"
                                             placeholder="GSTIN"
-                                            className="input-field-compact"
+                                            className={`input-field-compact ${fieldErrors.gstin && touchedFields.gstin ? 'border-red-500 focus:border-red-500' : ''}`}
                                             value={formData.business?.gstin}
                                             onChange={handleBusinessChange}
+                                            onBlur={(e) => handleFieldBlur('gstin', e.target.value)}
                                         />
                                     </div>
+                                    {fieldErrors.gstin && touchedFields.gstin && (
+                                        <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.gstin}</p>
+                                    )}
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-semibold text-gray-700 ml-1">Bank Name</label>
@@ -307,13 +498,13 @@ export default function RegisterPage() {
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
                                         <label className="text-xs font-semibold text-gray-700 ml-1">Country</label>
-                                        <input
-                                            type="text"
-                                            name="country"
-                                            placeholder="Country"
-                                            className="input-field-compact pl-4!"
-                                            value={formData.address?.country}
-                                            onChange={handleAddressChange}
+                                        <CountrySearchDropdown
+                                            value={formData.address?.country || ""}
+                                            onChange={(value) => setFormData({
+                                                ...formData,
+                                                address: { ...formData.address, country: value }
+                                            })}
+                                            placeholder="Search country..."
                                         />
                                     </div>
                                     <div className="space-y-1">
@@ -322,10 +513,14 @@ export default function RegisterPage() {
                                             type="text"
                                             name="pincode"
                                             placeholder="Pin"
-                                            className="input-field-compact pl-4!"
+                                            className={`input-field-compact pl-4! ${fieldErrors.pincode && touchedFields.pincode ? 'border-red-500 focus:border-red-500' : ''}`}
                                             value={formData.address?.pincode}
                                             onChange={handleAddressChange}
+                                            onBlur={(e) => handleFieldBlur('pincode', e.target.value)}
                                         />
+                                        {fieldErrors.pincode && touchedFields.pincode && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.pincode}</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -337,15 +532,19 @@ export default function RegisterPage() {
                                             type={showPassword ? "text" : "password"}
                                             name="password"
                                             placeholder="Password"
-                                            className="input-field-compact pr-8"
+                                            className={`input-field-compact pr-8 ${fieldErrors.password && touchedFields.password ? 'border-red-500 focus:border-red-500' : ''}`}
                                             required
                                             value={formData.profile.password}
                                             onChange={handleProfileChange}
+                                            onBlur={(e) => handleFieldBlur('password', e.target.value)}
                                         />
                                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors">
                                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                         </button>
                                     </div>
+                                    {fieldErrors.password && touchedFields.password && (
+                                        <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.password}</p>
+                                    )}
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-semibold text-gray-700 ml-1">Confirm</label>
@@ -354,15 +553,19 @@ export default function RegisterPage() {
                                         <input
                                             type={showConfirmPassword ? "text" : "password"}
                                             placeholder="Confirm Password"
-                                            className="input-field-compact pr-8"
+                                            className={`input-field-compact pr-8 ${fieldErrors.confirmPassword && touchedFields.confirmPassword ? 'border-red-500 focus:border-red-500' : ''}`}
                                             required
                                             value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            onChange={handleConfirmPasswordChange}
+                                            onBlur={(e) => handleFieldBlur('confirmPassword', e.target.value)}
                                         />
                                         <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors">
                                             {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                         </button>
                                     </div>
+                                    {fieldErrors.confirmPassword && touchedFields.confirmPassword && (
+                                        <p className="text-xs text-red-500 mt-1 ml-1">{fieldErrors.confirmPassword}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -396,32 +599,47 @@ export default function RegisterPage() {
             </div>
 
             <style jsx global>{`
-        .input-field-compact {
-          width: 100%;
-          padding-left: 2.5rem; 
-          padding-right: 0.75rem;
-          padding-top: 0.6rem;
-          padding-bottom: 0.6rem;
-          background-color: rgb(249, 250, 251); /* gray-50 */
-          border-width: 1px;
-          border-color: rgb(229, 231, 235); /* gray-200 */
-          border-radius: 0.5rem; /* rounded-lg */
-          color: rgb(17, 24, 39); /* gray-900 */
-          font-size: 0.875rem; /* text-sm */
-          font-weight: 500;
-          transition: all 0.2s;
-        }
-        .input-field-compact::placeholder {
-           color: rgb(156, 163, 175); /* gray-400 */
-           font-size: 0.8rem;
-        }
-        .input-field-compact:focus {
-          outline: none;
-          background-color: white;
-          border-color: rgb(37, 99, 235); /* blue-600 */
-          box-shadow: 0 0 0 1px rgb(37, 99, 235);
-        }
-      `}</style>
+                .input-field-compact {
+                    width: 100%;
+                    padding-left: 2.5rem; 
+                    padding-right: 0.75rem;
+                    padding-top: 0.6rem;
+                    padding-bottom: 0.6rem;
+                    background-color: hsl(var(--background));
+                    border-width: 1px;
+                    border-color: hsl(var(--border));
+                    border-radius: 0.5rem; /* rounded-lg */
+                    color: hsl(var(--foreground));
+                    font-size: 0.875rem; /* text-sm */
+                    font-weight: 500;
+                    transition: all 0.2s;
+                }
+                .input-field-compact::placeholder {
+                    opacity: 0.4;
+                    font-size: 0.8rem;
+                }
+                .input-field-compact:focus {
+                    outline: none;
+                    background-color: hsl(var(--card));
+                    border-color: rgb(37, 99, 235); /* blue-600 */
+                    box-shadow: 0 0 0 1px rgb(37, 99, 235);
+                }
+                select.input-field-compact {
+                    appearance: none;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: right 0.75rem center;
+                    background-size: 1rem;
+                }
+                input::-webkit-outer-spin-button,
+                input::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                input[type=number] {
+                    -moz-appearance: textfield;
+                }
+            `}</style>
         </div>
     )
 }

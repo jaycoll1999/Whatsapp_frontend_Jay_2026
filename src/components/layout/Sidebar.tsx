@@ -66,12 +66,14 @@ export function Sidebar({ collapsed, toggleSidebar }: SidebarProps) {
     const { logout, user: authUser, role: authRole } = useAuth()
     const [userId, setUserId] = useState<string | null>(null)
     const [userName, setUserName] = useState<string>("User")
+    const [userEmail, setUserEmail] = useState<string | null>(null)
     const [role, setRole] = useState<string | null>(null)
 
     useEffect(() => {
         if (authUser) {
             setUserId(authUser.id)
-            setUserName(authUser.name)
+            setUserName(authUser.name || "Guest")
+            setUserEmail(authUser.email)
             setRole(authRole)
         }
     }, [authUser, authRole])
@@ -206,9 +208,9 @@ export function Sidebar({ collapsed, toggleSidebar }: SidebarProps) {
                                 </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">{userName}</p>
-                                <p className="text-[11px] text-slate-400 truncate leading-tight font-mono">
-                                    {userId ? userId.substring(0, 16) + "…" : "—"}
+                                <p className="text-[13px] font-bold text-slate-800 truncate leading-tight">{userName}</p>
+                                <p className="text-[11px] text-slate-500 truncate leading-tight">
+                                    {userEmail || "guest@example.com"}
                                 </p>
                             </div>
                         </Link>

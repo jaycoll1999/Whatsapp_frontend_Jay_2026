@@ -12,14 +12,13 @@ type PlanType = "all" | "reseller" | "user"
 const overviewCards = [
     { id: "all", label: "Total Plans", icon: LayoutGrid, bg: "#EFF6FF", border: "#BFDBFE", text: "#1D4ED8", iconBg: "#DBEAFE" },
     { id: "reseller", label: "Reseller Plans", icon: Crown, bg: "#F5F3FF", border: "#DDD6FE", text: "#6D28D9", iconBg: "#EDE9FE" },
-    { id: "user", label: "User Plans", icon: Users, bg: "#F0FDF4", border: "#BBF7D0", text: "#15803D", iconBg: "#DCFCE7" },
     { id: "price", label: "Avg Price", icon: TrendingDown, bg: "#FFFBEB", border: "#FDE68A", text: "#B45309", iconBg: "#FEF3C7", value: "₹0", noFilter: true },
 ]
 
 export default function PlansPage() {
     const { plans, isLoading, error } = usePlans('ALL');
     const [viewMode, setViewMode] = useState<"card" | "table">("card")
-    const [activePlanType, setActivePlanType] = useState<PlanType>("all")
+    const [activePlanType, setActivePlanType] = useState<PlanType>("reseller")
 
     const filtered = plans.filter(p => activePlanType === "all" || p.category === activePlanType)
 
@@ -27,7 +26,6 @@ export default function PlansPage() {
     const countMap: Record<string, string> = {
         all: plans.length.toString(),
         reseller: plans.filter(p => p.category === "reseller").length.toString(),
-        user: plans.filter(p => p.category === "user").length.toString(),
         price: plans.length > 0
             ? `₹${Math.round(plans.reduce((acc, p) => acc + parseFloat(p.price.replace(/,/g, '')), 0) / plans.length).toLocaleString()}`
             : "₹0",

@@ -30,9 +30,7 @@ export default function AnalyticsPage() {
     const [user, setUser] = useState<{ user_id: string; role: string } | null>(null);
     const [data, setData] = useState<ResellerDashboardResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
-    const [regenerating, setRegenerating] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -76,29 +74,25 @@ export default function AnalyticsPage() {
         }
     };
 
-    const handleRegenerate = async () => {
-        if (!user) return;
-
-        try {
-            setRegenerating(true);
-            setError(null);
-            setSuccess(null);
-            const dashboard = await analyticsService.regenerateAnalytics(user.user_id);
-            setData(dashboard);
-            setSuccess("Analytics regenerated successfully.");
-            setTimeout(() => setSuccess(null), 3000);
-        } catch (error) {
-            console.error("Failed to regenerate analytics", error);
-            setError("Failed to regenerate data.");
-        } finally {
-            setRegenerating(false);
-        }
-    };
 
     useEffect(() => {
         if (user && user.role === 'reseller') {
             fetchAnalytics();
         }
+    }, [user]);
+
+    // Auto-refresh analytics every 30 seconds (only when page is visible)
+    useEffect(() => {
+        if (!user || user.role !== 'reseller') return;
+
+        const interval = setInterval(() => {
+            // Only fetch if page is visible to avoid unnecessary API calls
+            if (!document.hidden) {
+                fetchAnalytics();
+            }
+        }, 30000); // 30 seconds
+
+        return () => clearInterval(interval);
     }, [user]);
 
     if (!user && loading) return <div className="p-8">Loading...</div>;
@@ -121,23 +115,15 @@ export default function AnalyticsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center space-x-2">
                         {error && <span className="text-xs text-red-500 font-medium">{error}</span>}
-                        {success && <span className="text-xs text-green-600 font-medium">{success}</span>}
                         <Button
                             variant="outline"
                             size="sm"
                             className="h-10 border-gray-200 text-gray-600 font-bold"
                             onClick={fetchAnalytics}
-                            disabled={loading || regenerating}
+                            disabled={loading}
                         >
                             <RefreshCw className={cn("h-3.5 w-3.5 mr-2", loading && "animate-spin")} />
                             {loading ? "Updating..." : "Refresh"}
-                        </Button>
-                        <Button
-                            onClick={handleRegenerate}
-                            disabled={regenerating}
-                            className="h-10 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm"
-                        >
-                            {regenerating ? 'Regenerating...' : 'Regenerate Analytics'}
                         </Button>
                     </div>
                 </div>

@@ -27,6 +27,11 @@ function LoginPageContent() {
         if (searchParams.get("registered") === "true") {
             setSuccessMessage("Registration successful! Please sign in.")
         }
+        // Set login type based on URL parameter
+        const type = searchParams.get("type")
+        if (type === "reseller" || type === "business") {
+            setLoginType(type)
+        }
     }, [searchParams])
 
     const handleSubmit = async (e: React.FormEvent) => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -38,7 +38,16 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ collapsed, toggleSidebar }: AdminSidebarProps) {
     const pathname = usePathname()
-    const { logout } = useAuth()
+    const { logout, user: authUser } = useAuth()
+    const [userName, setUserName] = useState<string>("Admin")
+    const [userEmail, setUserEmail] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (authUser) {
+            setUserName(authUser.name || "Admin")
+            setUserEmail(authUser.email)
+        }
+    }, [authUser])
 
     const handleSignOut = () => {
         logout()
@@ -59,7 +68,7 @@ export function AdminSidebar({ collapsed, toggleSidebar }: AdminSidebarProps) {
                 {!collapsed && (
                     <>
                         <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
+                            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
                                 <ShieldCheck className="w-5 h-5 text-white" />
                             </div>
                             <div className="min-w-0">
@@ -77,7 +86,7 @@ export function AdminSidebar({ collapsed, toggleSidebar }: AdminSidebarProps) {
                 )}
 
                 {collapsed && (
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <div className="w-9 h-9 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                         <ShieldCheck className="w-5 h-5 text-white" />
                     </div>
                 )}
@@ -128,12 +137,18 @@ export function AdminSidebar({ collapsed, toggleSidebar }: AdminSidebarProps) {
                 {!collapsed ? (
                     <div className="bg-slate-800/50 rounded-2xl p-3 space-y-3">
                         <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 border-2 border-indigo-500/30">
-                                <AvatarFallback className="bg-indigo-600 text-white font-bold">AD</AvatarFallback>
+                            <Link href="/dashboard/admin/profile" title="Profile">
+                            <Avatar className="h-10 w-10 border-2 border-indigo-500/30 cursor-pointer hover:opacity-80 transition-opacity">
+                                <AvatarFallback className="bg-indigo-600 text-white font-bold">
+                                    {userName.charAt(0).toUpperCase()}
+                                </AvatarFallback>
                             </Avatar>
+                        </Link>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-bold text-white truncate">System Admin</p>
-                                <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Superuser</p>
+                                <p className="text-[13px] font-bold text-white truncate">{userName}</p>
+                                <p className="text-[10px] text-slate-400 truncate leading-tight">
+                                    {userEmail || "admin@example.com"}
+                                </p>
                             </div>
                         </div>
                         <button
@@ -147,7 +162,7 @@ export function AdminSidebar({ collapsed, toggleSidebar }: AdminSidebarProps) {
                 ) : (
                     <div className="flex flex-col items-center gap-4">
                         <Avatar className="h-10 w-10 border-2 border-indigo-500/30">
-                            <AvatarFallback className="bg-indigo-600 text-white font-bold">AD</AvatarFallback>
+                            <AvatarFallback className="bg-indigo-600 text-white font-bold">{userName.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <button
                             onClick={handleSignOut}
