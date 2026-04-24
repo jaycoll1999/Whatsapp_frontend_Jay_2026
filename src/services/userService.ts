@@ -85,6 +85,16 @@ const userService = {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
+    },
+
+    requestPasswordReset: async (email: string) => {
+        const response = await axios.post(`${API_URL}/auth/password-reset/request`, { email });
+        return response.data;
+    },
+
+    resetPassword: async (token: string, newPassword: string) => {
+        const response = await axios.post(`${API_URL}/auth/password-reset/confirm`, { token, new_password: newPassword });
+        return response.data;
     }
 };
 

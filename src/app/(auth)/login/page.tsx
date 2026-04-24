@@ -183,7 +183,7 @@ function LoginPageContent() {
                             </div>
                             <span className="text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">Remember me</span>
                         </label>
-                        <Link href="#" className="text-sm font-bold text-blue-600 hover:text-blue-500 transition-colors">
+                        <Link href={`/forgot-password?email=${encodeURIComponent(formData.email)}`} className="text-sm font-bold text-blue-600 hover:text-blue-500 transition-colors">
                             Forgot password?
                         </Link>
                     </div>

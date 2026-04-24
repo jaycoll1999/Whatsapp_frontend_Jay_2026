@@ -543,7 +543,7 @@ function UserRegisterForm() {
                                     <Coins className="w-4 h-4 text-blue-600" />
                                     Account Settings
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="hidden">
                                     <div className="space-y-1">
                                         <label className="text-xs font-semibold text-gray-700 ml-1">Credits Allocated</label>
                                         <div className="relative group">
