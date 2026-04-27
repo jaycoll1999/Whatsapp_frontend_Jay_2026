@@ -140,6 +140,40 @@ export default function LandingPage() {
                 ::-webkit-scrollbar-track { background: var(--bg-page); }
                 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
                 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+                /* Responsive Overrides */
+                @media (max-width: 1024px) {
+                    .container { padding: 0 20px; }
+                    .pricing-grid { grid-template-columns: repeat(2, 1fr) !important; }
+                    .bento-grid { 
+                        grid-template-columns: repeat(2, 1fr) !important; 
+                        grid-template-rows: auto !important;
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .pricing-grid { grid-template-columns: 1fr !important; }
+                    .bento-grid { grid-template-columns: 1fr !important; }
+                    .hero-badges-container { display: none !important; }
+                    
+                    section { padding: 40px 0 !important; }
+                    .hero-section { padding-top: 80px !important; }
+                    
+                    h1 { font-size: 40px !important; }
+                    h2 { font-size: 32px !important; }
+                }
+
+                @media (max-width: 480px) {
+                    .container { padding: 0 16px; }
+                    h1 { font-size: 32px !important; }
+                    
+                    /* Adjust Hero Buttons */
+                    .hero-ctas { 
+                        flex-direction: column; 
+                        width: 100%; 
+                    }
+                    .hero-ctas button { width: 100%; }
+                }
             `}</style>
             
             <div className={darkMode ? "dark" : ""} style={{

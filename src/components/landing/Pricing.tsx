@@ -37,6 +37,8 @@ const plans = [
 ]
 
 const Pricing = () => {
+    const router = useRouter();
+
     return (
         <section id="pricing" style={{ padding: '80px 0', background: 'var(--bg-surface)' }}>
             <div className="container">
@@ -49,7 +51,7 @@ const Pricing = () => {
                     </p>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+                <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', maxWidth: '1200px', margin: '0 auto' }}>
                     {plans.map((p, i) => (
                         <motion.div
                             key={i}
@@ -99,22 +101,25 @@ const Pricing = () => {
                                 </div>
                             </div>
 
-                            <button style={{
-                                width: '100%',
-                                padding: '16px',
-                                borderRadius: '14px',
-                                border: 'none',
-                                background: p.featured ? 'var(--primary)' : 'var(--bg-surface)',
-                                color: p.featured ? '#fff' : 'var(--text-heading)',
-                                fontWeight: 800,
-                                fontSize: '16px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '10px'
-                            }}>
+                            <button 
+                                onClick={() => router.push('/register-user')}
+                                style={{
+                                    width: '100%',
+                                    padding: '16px',
+                                    borderRadius: '14px',
+                                    border: 'none',
+                                    background: p.featured ? 'var(--primary)' : 'var(--bg-surface)',
+                                    color: p.featured ? '#fff' : 'var(--text-heading)',
+                                    fontWeight: 800,
+                                    fontSize: '16px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '10px'
+                                }}
+                            >
                                 Buy Plan <ArrowRight size={18} />
                             </button>
                         </motion.div>

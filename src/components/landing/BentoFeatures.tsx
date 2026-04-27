@@ -43,7 +43,7 @@ const BentoFeatures = () => {
                     </p>
                 </div>
 
-                <div style={{
+                <div className="bento-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, 1fr)',
                     gridTemplateRows: 'repeat(2, 300px)',

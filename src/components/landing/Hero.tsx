@@ -23,7 +23,7 @@ const Hero = () => {
     const router = useRouter()
 
     return (
-        <section style={{ 
+        <section className="hero-section" style={{ 
             padding: '120px 0 60px',
             background: 'radial-gradient(circle at 10% 20%, rgba(34, 197, 94, 0.05) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(37, 99, 235, 0.05) 0%, transparent 40%)',
             position: 'relative',
@@ -96,6 +96,7 @@ const Hero = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
+                    className="hero-ctas"
                     style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '80px' }}
                 >
                     <button
@@ -168,55 +169,57 @@ const Hero = () => {
                         />
 
                         {/* Floating Badges */}
-                        <AnimatePresence>
-                            {floatingBadges.map((badge, i) => (
-                                <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, scale: 0.8 }}
-                                    animate={{ 
-                                        opacity: 1, 
-                                        scale: 1,
-                                        y: [0, -10, 0]
-                                    }}
-                                    transition={{ 
-                                        opacity: { delay: 0.8 + i * 0.1 },
-                                        scale: { delay: 0.8 + i * 0.1 },
-                                        y: { duration: 3 + Math.random() * 2, repeat: Infinity, ease: "easeInOut", delay: badge.delay }
-                                    }}
-                                    style={{
-                                        position: 'absolute',
-                                        top: badge.top,
-                                        left: badge.left,
-                                        right: badge.right,
-                                        background: 'var(--bg-glass)',
-                                        backdropFilter: 'blur(8px)',
-                                        padding: '12px 20px',
-                                        borderRadius: '16px',
-                                        border: '1px solid var(--border)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        boxShadow: 'var(--shadow-lg)',
-                                        zIndex: 10,
-                                        whiteSpace: 'nowrap'
-                                    }}
-                                >
-                                    <div style={{
-                                        width: '32px',
-                                        height: '32px',
-                                        background: `${badge.color}20`,
-                                        color: badge.color,
-                                        borderRadius: '8px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}>
-                                        {badge.icon}
-                                    </div>
-                                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-heading)' }}>{badge.label}</span>
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
+                        <div className="hero-badges-container">
+                            <AnimatePresence>
+                                {floatingBadges.map((badge, i) => (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ 
+                                            opacity: 1, 
+                                            scale: 1,
+                                            y: [0, -10, 0]
+                                        }}
+                                        transition={{ 
+                                            opacity: { delay: 0.8 + i * 0.1 },
+                                            scale: { delay: 0.8 + i * 0.1 },
+                                            y: { duration: 3 + Math.random() * 2, repeat: Infinity, ease: "easeInOut", delay: badge.delay }
+                                        }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: badge.top,
+                                            left: badge.left,
+                                            right: badge.right,
+                                            background: 'var(--bg-glass)',
+                                            backdropFilter: 'blur(8px)',
+                                            padding: '12px 20px',
+                                            borderRadius: '16px',
+                                            border: '1px solid var(--border)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            boxShadow: 'var(--shadow-lg)',
+                                            zIndex: 10,
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            background: `${badge.color}20`,
+                                            color: badge.color,
+                                            borderRadius: '8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            {badge.icon}
+                                        </div>
+                                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-heading)' }}>{badge.label}</span>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
                     </div>
                 </motion.div>
             </div>
