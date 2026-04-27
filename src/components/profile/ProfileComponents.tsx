@@ -1,13 +1,13 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
     ShieldCheck, User, Building2, Layout, Lock,
     Save, X, Loader2, CreditCard, Wallet,
     TrendingUp, DollarSign, Calendar, Mail,
-    Phone, MapPin, Briefcase, Globe
+    Phone, MapPin, Briefcase, Globe, Camera
 } from "lucide-react"
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -24,12 +24,38 @@ interface ProfileProps {
 }
 
 /* ── Profile Hero Banner ── */
-export function ProfileHeader({ data }: { data: any }) {
+export function ProfileHeader({ data, onUpdate }: { data: any, onUpdate?: (updatedData: any) => Promise<void> }) {
     if (!data) return null
 
     const name = data.profile?.name || data.profile?.username || "User"
     const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
     const isActive = data.status === "active" || data.whatsapp_mode === "active"
+    const [uploading, setUploading] = useState(false)
+
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file || !onUpdate) return
+
+        setUploading(true)
+        try {
+            // In a real app, you'd upload to S3/Cloudinary and get a URL
+            // For now, we'll simulate it by using a data URL or just showing we tried
+            const reader = new FileReader()
+            reader.onloadend = async () => {
+                const base64String = reader.result as string
+                await onUpdate({
+                    profile: { 
+                        image_url: base64String
+                    }
+                })
+                setUploading(false)
+            }
+            reader.readAsDataURL(file)
+        } catch (err) {
+            console.error("Failed to upload image:", err)
+            setUploading(false)
+        }
+    }
 
     return (
         <div
@@ -45,32 +71,61 @@ export function ProfileHeader({ data }: { data: any }) {
 
             <div className="relative flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4">
-                    <div className="relative shrink-0">
-                        <Avatar className="h-16 w-16 border-2 border-white/30 shadow-xl">
-                            <AvatarFallback className="text-xl font-bold bg-white/20 text-white backdrop-blur-sm">
-                                {initials}
-                            </AvatarFallback>
-                        </Avatar>
+                    <div className="relative shrink-0 group">
+                        <input
+                            type="file"
+                            id="profile-upload"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            disabled={uploading}
+                        />
+                        <label 
+                            htmlFor="profile-upload" 
+                            className="cursor-pointer block relative"
+                        >
+                            <Avatar className="h-20 w-20 border-4 border-white/30 shadow-xl transition-transform duration-300 group-hover:scale-105">
+                                <AvatarImage 
+                                    key={data.profile?.image_url} 
+                                    src={data.profile?.image_url || "/profile_placeholder.png"} 
+                                    className="object-cover" 
+                                />
+                                <AvatarFallback className="text-2xl font-bold bg-white/20 text-white backdrop-blur-sm">
+                                    {initials}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className={cn(
+                                "absolute inset-0 flex items-center justify-center bg-black/20 rounded-full transition-opacity duration-300",
+                                uploading ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            )}>
+                                {uploading ? (
+                                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                                ) : (
+                                    <Camera className="h-6 w-6 text-white" />
+                                )}
+                            </div>
+                        </label>
                         <span className={cn(
-                            "absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-2 border-white shadow-sm pulse-dot",
+                            "absolute bottom-1 right-1 h-5 w-5 rounded-full border-2 border-white shadow-sm pulse-dot",
                             isActive ? "bg-green-400" : "bg-red-400"
                         )} />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold text-white capitalize tracking-tight">{name}</h1>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className="text-[11px] font-semibold text-white/90 bg-white/15 backdrop-blur-sm px-2.5 py-0.5 rounded-full border border-white/20">
-                                {isActive ? "● Active" : "○ Inactive"}
+                        <h1 className="text-2xl font-bold text-white capitalize tracking-tight">{name}</h1>
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="text-[12px] font-semibold text-white/90 bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5">
+                                <span className={cn("h-2 w-2 rounded-full", isActive ? "bg-green-400" : "bg-red-400")} />
+                                {isActive ? "Active" : "Inactive"}
                             </span>
-                            <span className="text-[11px] font-semibold text-white/90 bg-white/15 backdrop-blur-sm px-2.5 py-0.5 rounded-full border border-white/20 capitalize">
+                            <span className="text-[12px] font-semibold text-white/90 bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 capitalize">
                                 {data.role === "business_owner" ? "Business User" : (data.role === "reseller" ? "Reseller" : data.role || "User")}
                             </span>
                         </div>
                     </div>
                 </div>
-                <div className="text-right">
-                    <p className="text-[11px] font-semibold text-white/60 uppercase tracking-wider">Member Since</p>
-                    <p className="text-sm font-bold text-white mt-0.5">Mar 26, 2024</p>
+                <div className="text-right bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+                    <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Member Since</p>
+                    <p className="text-sm font-black text-white mt-0.5">Mar 26, 2024</p>
                 </div>
             </div>
         </div>

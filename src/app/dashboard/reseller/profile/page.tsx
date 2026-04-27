@@ -137,7 +137,7 @@ export default function ResellerProfilePage() {
     return (
         <div className="p-8 space-y-6 bg-gray-50/20 min-h-screen">
             {/* Header Section */}
-            <ProfileHeader data={data} />
+            <ProfileHeader data={data} onUpdate={handleUpdate} />
 
             {/* Stats Row */}
             <ProfileStats data={data} />

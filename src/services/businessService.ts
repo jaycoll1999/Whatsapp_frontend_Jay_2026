@@ -45,6 +45,7 @@ export interface BusinessProfile {
         username: string;
         email: string;
         phone: string;
+        image_url?: string;
         created_at?: string;
     };
     business: {

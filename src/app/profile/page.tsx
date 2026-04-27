@@ -47,7 +47,7 @@ export default function ProfilePage() {
             <div className="space-y-8 max-w-7xl mx-auto">
 
                 {/* Header Section */}
-                <ProfileHeader data={profileData} />
+                <ProfileHeader data={profileData} onUpdate={handleUpdate} />
 
                 {/* Stats Row */}
                 <ProfileStats data={profileData} />

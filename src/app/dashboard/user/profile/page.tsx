@@ -74,7 +74,7 @@ export default function UserProfilePage() {
         <div className="space-y-8 max-w-7xl mx-auto">
 
             {/* Header Section */}
-            <ProfileHeader data={data} />
+            <ProfileHeader data={data} onUpdate={handleUpdate} />
 
             {/* Stats Row */}
             <ProfileStats data={data} />

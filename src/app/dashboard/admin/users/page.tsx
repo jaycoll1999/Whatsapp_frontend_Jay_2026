@@ -27,6 +27,8 @@ export default function AdminUsersPage() {
     const [roleFilter, setRoleFilter] = useState("all")
     const [users, setUsers] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 10
 
     const [viewUser, setViewUser] = useState<any>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -51,6 +53,11 @@ export default function AdminUsersPage() {
             setNotification(prev => ({ ...prev, show: false }));
         }, 5000);
     };
+
+    // Reset to first page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter, roleFilter]);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -197,6 +204,21 @@ export default function AdminUsersPage() {
         );
     }
 
+    const filteredUsers = users.filter(u => {
+        const matchesSearch = (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              u.company?.toLowerCase().includes(searchQuery.toLowerCase()));
+        
+        const matchesStatus = statusFilter === "all" || u.status === statusFilter;
+        const matchesRole = roleFilter === "all" || u.role === roleFilter;
+
+        return matchesSearch && matchesStatus && matchesRole;
+    });
+
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+
     return (
         <div className="p-6 space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto relative">
             {/* Custom Notification Module */}
@@ -314,17 +336,7 @@ export default function AdminUsersPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
-                                {users.length > 0 ? users
-                                    .filter(u => {
-                                        const matchesSearch = (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                                              u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                                              u.company?.toLowerCase().includes(searchQuery.toLowerCase()));
-                                        
-                                        const matchesStatus = statusFilter === "all" || u.status === statusFilter;
-                                        const matchesRole = roleFilter === "all" || u.role === roleFilter;
-
-                                        return matchesSearch && matchesStatus && matchesRole;
-                                    })
+                                {paginatedUsers.length > 0 ? paginatedUsers
                                     .map((user) => (
                                     <tr key={user.id} className="group hover:bg-slate-50/50 transition-colors duration-200">
                                         <td className="px-8 py-6">
@@ -401,26 +413,41 @@ export default function AdminUsersPage() {
                     </div>
 
                     {/* Pagination */}
-                    <div className="p-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Showing {users.length > 0 ? 1 : 0} to {users.length} of {users.length} users</p>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" className="w-10 h-10 p-0 rounded-xl border-slate-200 text-slate-400" disabled>
-                                <ChevronLeft className="w-5 h-5" />
-                            </Button>
-                            {[1, 2, 3].map(p => (
+                    {totalPages > 1 && (
+                        <div className="p-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users
+                            </p>
+                            <div className="flex items-center gap-2">
                                 <Button 
-                                    key={p} 
-                                    variant={p === 1 ? 'default' : 'outline'} 
-                                    className={`w-10 h-10 p-0 rounded-xl font-bold transition-all ${p === 1 ? 'bg-indigo-600 shadow-lg shadow-indigo-600/20' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                                    variant="outline" 
+                                    className="w-10 h-10 p-0 rounded-xl border-slate-200 text-slate-400" 
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
                                 >
-                                    {p}
+                                    <ChevronLeft className="w-5 h-5" />
                                 </Button>
-                            ))}
-                            <Button variant="outline" className="w-10 h-10 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50">
-                                <ChevronRight className="w-5 h-5" />
-                            </Button>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                    <Button 
+                                        key={p} 
+                                        variant={p === currentPage ? 'default' : 'outline'} 
+                                        className={`w-10 h-10 p-0 rounded-xl font-bold transition-all ${p === currentPage ? 'bg-indigo-600 shadow-lg shadow-indigo-600/20' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                                        onClick={() => setCurrentPage(p)}
+                                    >
+                                        {p}
+                                    </Button>
+                                ))}
+                                <Button 
+                                    variant="outline" 
+                                    className="w-10 h-10 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronRight className="w-5 h-5" />
+                                </Button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </CardContent>
             </Card>
 
