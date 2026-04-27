@@ -465,20 +465,20 @@ export default function AdminDashboardPage() {
                                 <ArrowRight className="w-3 h-3" />
                             </button>
                         </div>
-                        <div className="overflow-x-auto px-2 pb-4 mt-4">
+                        <div className="overflow-x-auto px-2 pb-1 mt-2">
                             <table className="w-full">
                                 <thead className="bg-slate-50/50">
                                     <tr>
-                                        <th className="px-6 py-4 text-left label">Partner Identity</th>
-                                        <th className="px-6 py-4 text-left label">Network Size</th>
-                                        <th className="px-6 py-4 text-left label">Credit Reserve</th>
-                                        <th className="px-6 py-4 text-center label">Actions</th>
+                                        <th className="text-left label border-b-2 border-slate-100">Partner Identity</th>
+                                        <th className="text-left label border-b-2 border-slate-100">Network Size</th>
+                                        <th className="text-left label border-b-2 border-slate-100">Credit Reserve</th>
+                                        <th className="text-center label border-b-2 border-slate-100">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {resellers.length > 0 ? resellers.map((r, i) => (
                                         <tr key={i} className="tr-hover group">
-                                            <td className="px-6 py-4">
+                                            <td>
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm bg-brand-50 text-brand-600 border border-brand-100">
                                                         {r.name.charAt(0).toUpperCase()}
@@ -489,19 +489,19 @@ export default function AdminDashboardPage() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td>
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-black text-slate-900 text-sm">{r.user_count || 0}</span>
                                                     <span className="text-[10px] text-muted-foreground font-bold uppercase">Businesses</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td>
                                                 <div className="badge-success gap-1.5 py-1 px-3">
                                                     <Wallet className="w-3 h-3" />
                                                     {r.credits?.toLocaleString()} Credits
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+                                            <td className="text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <Button 
                                                         variant="ghost" 

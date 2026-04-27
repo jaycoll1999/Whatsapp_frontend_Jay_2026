@@ -70,11 +70,28 @@ export default function UserProfilePage() {
         }
     }
 
+    const handleRemoveImage = async () => {
+        try {
+            const token = localStorage.getItem("token")
+            if (!token) return
+            
+            await businessService.removeProfileImage(token)
+            
+            // Refetch to get clean data
+            const refreshed = await businessService.getProfile(token)
+            setData(refreshed)
+            alert("Profile photo removed successfully")
+        } catch (err) {
+            console.error("Failed to remove profile photo", err)
+            alert("Failed to remove profile photo")
+        }
+    }
+
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
 
             {/* Header Section */}
-            <ProfileHeader data={data} onUpdate={handleUpdate} />
+            <ProfileHeader data={data} onUpdate={handleUpdate} onRemoveImage={handleRemoveImage} />
 
             {/* Stats Row */}
             <ProfileStats data={data} />
@@ -82,7 +99,7 @@ export default function UserProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Info Column */}
                 <div className="lg:col-span-2 space-y-8">
-                    <PersonalInfoSection data={data} onUpdate={handleUpdate} />
+                    <PersonalInfoSection data={data} onUpdate={handleUpdate} onRemoveImage={handleRemoveImage} />
                     <BusinessInfoSection data={data} onUpdate={handleUpdate} />
                 </div>
 

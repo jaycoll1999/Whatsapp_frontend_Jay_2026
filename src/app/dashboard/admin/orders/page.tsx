@@ -56,6 +56,7 @@ export default function AdminOrdersPage() {
     const [searchQuery, setSearchQuery] = useState("")
     const [orders, setOrders] = useState<Order[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     
     // Filters state
     const [userTypeFilter, setUserTypeFilter] = useState<string>("all")
@@ -65,6 +66,7 @@ export default function AdminOrdersPage() {
 
     const fetchOrders = useCallback(async () => {
         setIsLoading(true)
+        setError(null)
         try {
             const params: any = {}
             if (userTypeFilter !== "all") params.user_type = userTypeFilter
@@ -74,8 +76,11 @@ export default function AdminOrdersPage() {
             
             const data = await getAdminOrders(params)
             setOrders(data)
-        } catch (error) {
-            console.error("Failed to fetch orders:", error)
+        } catch (err: any) {
+            console.error("Failed to fetch orders:", err)
+            // Handle structured backend error (503) or generic error
+            const errorMessage = err.response?.data?.detail?.message || err.message || "Unable to load orders. Please try again.";
+            setError(errorMessage)
         } finally {
             setIsLoading(false)
         }
@@ -271,6 +276,24 @@ export default function AdminOrdersPage() {
                             <div className="flex flex-col items-center justify-center py-20 space-y-4">
                                 <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
                                 <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Fetching system orders...</p>
+                            </div>
+                        ) : error ? (
+                            <div className="flex flex-col items-center justify-center py-20 space-y-6">
+                                <div className="p-4 bg-rose-50 rounded-full animate-pulse">
+                                    <X className="h-10 w-10 text-rose-500" />
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-slate-900 font-black text-lg">Connection Failure</p>
+                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">{error}</p>
+                                </div>
+                                <Button 
+                                    onClick={fetchOrders}
+                                    variant="outline"
+                                    className="rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-black gap-2 px-8 h-12 active:scale-95 transition-all shadow-sm"
+                                >
+                                    <Zap className="w-4 h-4 fill-current" />
+                                    Retry Connection
+                                </Button>
                             </div>
                         ) : filteredOrders.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 space-y-4">

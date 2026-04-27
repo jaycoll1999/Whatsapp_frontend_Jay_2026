@@ -7,7 +7,7 @@ import {
     ShieldCheck, User, Building2, Layout, Lock,
     Save, X, Loader2, CreditCard, Wallet,
     TrendingUp, DollarSign, Calendar, Mail,
-    Phone, MapPin, Briefcase, Globe, Camera
+    Phone, MapPin, Briefcase, Globe, Camera, Trash2
 } from "lucide-react"
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -21,15 +21,19 @@ import {
 interface ProfileProps {
     data: any | null
     onUpdate?: (updatedData: any) => Promise<void>
+    onRemoveImage?: () => Promise<void>
 }
 
 /* ── Profile Hero Banner ── */
-export function ProfileHeader({ data, onUpdate }: { data: any, onUpdate?: (updatedData: any) => Promise<void> }) {
+export function ProfileHeader({ data, onUpdate, onRemoveImage }: ProfileProps) {
     if (!data) return null
 
     const name = data.profile?.name || data.profile?.username || "User"
+    const businessName = data.business?.business_name || name
+    // Simplified subtitle to match screenshot vibe
+    const subtitle = `${data.profile?.name || ""} ${data.profile?.phone ? ' - ' + data.profile.phone : ''} ${data.profile?.email ? ' - ' + data.profile.email : ''}`
+    
     const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
-    const isActive = data.status === "active" || data.whatsapp_mode === "active"
     const [uploading, setUploading] = useState(false)
 
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,8 +42,6 @@ export function ProfileHeader({ data, onUpdate }: { data: any, onUpdate?: (updat
 
         setUploading(true)
         try {
-            // In a real app, you'd upload to S3/Cloudinary and get a URL
-            // For now, we'll simulate it by using a data URL or just showing we tried
             const reader = new FileReader()
             reader.onloadend = async () => {
                 const base64String = reader.result as string
@@ -58,75 +60,103 @@ export function ProfileHeader({ data, onUpdate }: { data: any, onUpdate?: (updat
     }
 
     return (
-        <div
-            className="rounded-2xl p-6 relative overflow-hidden"
+        <div 
+            className="relative overflow-hidden rounded-[2.5rem] p-8 md:p-10 shadow-2xl mb-10 group/banner"
             style={{
                 background: "linear-gradient(135deg, #0e7468 0%, #128C7E 40%, #1aaa9a 70%, #25D366 100%)",
             }}
         >
-            {/* Decorative circles */}
-            <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/5 rounded-full" />
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/5 rounded-full" />
-            <div className="absolute top-4 right-24 w-12 h-12 bg-white/5 rounded-full" />
+            {/* Decorative modern elements inspired by screenshot */}
+            <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/10 rounded-full blur-3xl transition-transform duration-700 group-hover/banner:scale-110" />
+            <div className="absolute top-1/2 -left-16 w-48 h-48 bg-white/5 rounded-full blur-2xl transition-transform duration-700 group-hover/banner:-translate-y-4" />
+            <div className="absolute top-10 right-1/4 w-20 h-20 bg-white/5 rounded-full blur-xl" />
 
-            <div className="relative flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                    <div className="relative shrink-0 group">
+            <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="flex items-center gap-8 flex-col sm:flex-row text-center sm:text-left">
+                    {/* Round Avatar Section on Left */}
+                    <div className="relative shrink-0 group/avatar">
                         <input
                             type="file"
-                            id="profile-upload"
+                            id="profile-upload-header"
                             className="hidden"
-                            accept="image/*"
+                            accept="image/png, image/jpeg, image/webp"
                             onChange={handleImageChange}
                             disabled={uploading}
                         />
                         <label 
-                            htmlFor="profile-upload" 
+                            htmlFor="profile-upload-header" 
                             className="cursor-pointer block relative"
                         >
-                            <Avatar className="h-20 w-20 border-4 border-white/30 shadow-xl transition-transform duration-300 group-hover:scale-105">
+                            <Avatar className="h-28 w-28 md:h-32 md:w-32 border-4 border-white/20 shadow-2xl transition-all duration-500 group-hover/avatar:scale-105 ring-8 ring-white/5">
                                 <AvatarImage 
-                                    key={data.profile?.image_url} 
-                                    src={data.profile?.image_url || "/profile_placeholder.png"} 
+                                    src={data.profile?.image_url} 
                                     className="object-cover" 
                                 />
-                                <AvatarFallback className="text-2xl font-bold bg-white/20 text-white backdrop-blur-sm">
+                                <AvatarFallback className="text-4xl font-black bg-white/10 text-white backdrop-blur-md">
                                     {initials}
                                 </AvatarFallback>
                             </Avatar>
+                            
+                            {/* Hover Overlay */}
                             <div className={cn(
-                                "absolute inset-0 flex items-center justify-center bg-black/20 rounded-full transition-opacity duration-300",
-                                uploading ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                "absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover/avatar:opacity-100 transition-all duration-300 backdrop-blur-[2px]",
+                                uploading && "opacity-100"
                             )}>
                                 {uploading ? (
-                                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                                    <Loader2 className="h-10 w-10 text-white animate-spin" />
                                 ) : (
-                                    <Camera className="h-6 w-6 text-white" />
+                                    <Camera className="h-10 w-10 text-white transform scale-90 group-hover/avatar:scale-100 transition-transform" />
                                 )}
                             </div>
                         </label>
-                        <span className={cn(
-                            "absolute bottom-1 right-1 h-5 w-5 rounded-full border-2 border-white shadow-sm pulse-dot",
-                            isActive ? "bg-green-400" : "bg-red-400"
-                        )} />
+
+                        {/* Remove Action */}
+                        {data.profile?.image_url && onRemoveImage && (
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    if (window.confirm("Remove profile photo?")) onRemoveImage();
+                                }}
+                                className="absolute -top-1 -right-1 bg-white text-red-500 p-2 rounded-full shadow-2xl border border-slate-100 hover:scale-110 active:scale-95 transition-all z-10"
+                                title="Remove Photo"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-white capitalize tracking-tight">{name}</h1>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                            <span className="text-[12px] font-semibold text-white/90 bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5">
-                                <span className={cn("h-2 w-2 rounded-full", isActive ? "bg-green-400" : "bg-red-400")} />
-                                {isActive ? "Active" : "Inactive"}
+
+                    {/* Branding/Info Text */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3 justify-center sm:justify-start">
+                            <span className="text-[10px] font-black tracking-[0.2em] uppercase px-3 py-1.5 bg-black/20 text-white/90 rounded-lg backdrop-blur-md border border-white/10 shadow-sm">
+                                {data.role === "business_owner" ? "BUSINESS USER" : (data.role === "reseller" ? "RESELLER" : "USER")}
                             </span>
-                            <span className="text-[12px] font-semibold text-white/90 bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 capitalize">
-                                {data.role === "business_owner" ? "Business User" : (data.role === "reseller" ? "Reseller" : data.role || "User")}
+                            {/* Subtle Pulse Indicator */}
+                            <span className="flex h-2 w-2 relative">
+                                <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", data.status === "active" ? "bg-green-400" : "bg-red-400")}></span>
+                                <span className={cn("relative inline-flex rounded-full h-2 w-2", data.status === "active" ? "bg-green-400" : "bg-red-400")}></span>
                             </span>
                         </div>
+                        
+                        <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter leading-tight drop-shadow-md">
+                            {businessName}
+                        </h1>
+                        
+                        <p className="text-white/70 text-sm md:text-base font-medium tracking-wide max-w-2xl line-clamp-2">
+                            {subtitle}
+                        </p>
                     </div>
                 </div>
-                <div className="text-right bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-                    <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Member Since</p>
-                    <p className="text-sm font-black text-white mt-0.5">Mar 26, 2024</p>
-                </div>
+
+                {/* Right Side Info (ERP System from screenshot) */}
+                {data.business?.erp_system && (
+                    <div className="md:text-right flex flex-col md:items-end gap-1.5 px-6 border-l md:border-l-0 md:border-r border-white/10 py-2">
+                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">ERP SYSTEM</p>
+                        <p className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase drop-shadow-sm">
+                            {data.business.erp_system}
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     )
@@ -192,7 +222,7 @@ export function ProfileStats({ data }: { data: any }) {
 }
 
 /* ── Personal Info Section ── */
-export function PersonalInfoSection({ data, onUpdate }: ProfileProps) {
+export function PersonalInfoSection({ data, onUpdate, onRemoveImage }: ProfileProps) {
     const [isEditing, setIsEditing] = useState(false)
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
@@ -202,6 +232,41 @@ export function PersonalInfoSection({ data, onUpdate }: ProfileProps) {
         country: data?.address?.country || "",
         full_address: data?.address?.full_address || "",
     })
+
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file || !onUpdate) return
+
+        // 2MB check
+        if (file.size > 2 * 1024 * 1024) {
+            alert("File size must be less than 2MB")
+            return
+        }
+
+        const reader = new FileReader()
+        reader.onloadend = async () => {
+            const base64String = reader.result as string
+            try {
+                setLoading(true)
+                await onUpdate({
+                    profile: { 
+                        image_url: base64String,
+                        username: data?.profile?.username,
+                        name: data?.profile?.name,
+                        email: data?.profile?.email,
+                        phone: data?.profile?.phone
+                    }
+                })
+                alert("Profile photo updated successfully!")
+            } catch (err) {
+                console.error(err)
+                alert("Failed to update profile photo")
+            } finally {
+                setLoading(false)
+            }
+        }
+        reader.readAsDataURL(file)
+    }
 
     const handleSave = async () => {
         if (!onUpdate) return
@@ -253,6 +318,57 @@ export function PersonalInfoSection({ data, onUpdate }: ProfileProps) {
                 </div>
             </CardHeader>
             <CardContent className="pt-5">
+                {/* Profile Photo Upload Area */}
+                <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 mb-6 border-b border-slate-50">
+                    <div className="relative group">
+                        <Avatar className="h-20 w-20 border-2 border-slate-100 shadow-sm">
+                            <AvatarImage src={data?.profile?.image_url} className="object-cover" />
+                            <AvatarFallback className="bg-blue-50 text-blue-600 text-2xl font-bold">
+                                {data?.profile?.name?.charAt(0) || data?.profile?.username?.charAt(0) || "U"}
+                            </AvatarFallback>
+                        </Avatar>
+                    </div>
+                    <div className="flex-1 text-center sm:text-left space-y-2">
+                        <h4 className="text-sm font-semibold text-slate-800">Profile Photo</h4>
+                        <p className="text-xs text-slate-500">Update your photo. Max size 2MB (JPG, PNG, WEBP).</p>
+                        <div className="flex flex-wrap justify-center sm:justify-start gap-2 pt-1">
+                            <input
+                                type="file"
+                                id="personal-info-upload"
+                                className="hidden"
+                                accept="image/png, image/jpeg, image/webp"
+                                onChange={handleImageChange}
+                            />
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 text-xs gap-1.5 border-slate-200 hover:border-blue-200 hover:bg-blue-50/50"
+                                onClick={() => document.getElementById('personal-info-upload')?.click()}
+                                disabled={loading}
+                            >
+                                <Camera className="h-3.5 w-3.5 text-slate-500" />
+                                {loading ? "Uploading..." : "Upload Photo"}
+                            </Button>
+                            {data?.profile?.image_url && onRemoveImage && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-8 text-xs gap-1.5 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                    onClick={() => {
+                                        if (window.confirm("Are you sure you want to remove your profile photo?")) {
+                                            onRemoveImage();
+                                        }
+                                    }}
+                                    disabled={loading}
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Remove Photo
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 {isEditing ? (
                     <div className="grid grid-cols-2 gap-4">
                         {[

@@ -92,6 +92,14 @@ const resellerService = {
             withCredentials: true
         });
         return response.data;
+    },
+
+    removeProfileImage: async (token: string) => {
+        const response = await axios.delete(`${API_URL}/profile/image`, {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true
+        });
+        return response.data;
     }
 };
 

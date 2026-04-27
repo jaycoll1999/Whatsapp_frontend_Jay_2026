@@ -167,6 +167,13 @@ export const businessService = {
         const response = await axios.get(`${API_BASE_URL}/user/dashboard/graph-data`);
         return response.data;
     },
+
+    removeProfileImage: async (token: string) => {
+        const response = await axios.delete(`${API_URL}/profile/image`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    },
 };
 
 export default businessService;

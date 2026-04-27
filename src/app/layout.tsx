@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./tables-improved.css";
 import { OrderProvider } from "@/context/OrderContext";
 import { ModalProvider } from "@/context/ModalContext";
 import { AuthProvider } from "@/context/AuthContext";

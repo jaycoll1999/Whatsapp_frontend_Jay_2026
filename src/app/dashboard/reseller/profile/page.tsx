@@ -118,6 +118,22 @@ export default function ResellerProfilePage() {
         }
     };
 
+    const handleRemoveImage = async () => {
+        try {
+            const token = localStorage.getItem("token") || localStorage.getItem("resellerToken")
+            if (!token) return;
+
+            await resellerService.removeProfileImage(token);
+            // Refresh data after removal
+            await fetchProfile();
+            // Show a simple alert for confirmation
+            alert("Profile photo removed successfully");
+        } catch (err) {
+            console.error("Removal failed:", err);
+            alert("Failed to remove profile photo");
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[80vh]">
@@ -137,14 +153,14 @@ export default function ResellerProfilePage() {
     return (
         <div className="p-8 space-y-6 bg-gray-50/20 min-h-screen">
             {/* Header Section */}
-            <ProfileHeader data={data} onUpdate={handleUpdate} />
+            <ProfileHeader data={data} onUpdate={handleUpdate} onRemoveImage={handleRemoveImage} />
 
             {/* Stats Row */}
             <ProfileStats data={data} />
 
             {/* Main Content Grid - 2 Columns */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <PersonalInfoSection data={data} onUpdate={handleUpdate} />
+                <PersonalInfoSection data={data} onUpdate={handleUpdate} onRemoveImage={handleRemoveImage} />
                 <BusinessInfoSection data={data} onUpdate={handleUpdate} />
                 <AccountDetailsSection data={data} />
                 <SecuritySettingsSection />

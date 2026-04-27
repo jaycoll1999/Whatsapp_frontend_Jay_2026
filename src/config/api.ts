@@ -113,6 +113,11 @@ export const uploadAdminProfileImage = async (file: File) => {
   });
   return response.data;
 };
+/** Remove admin profile image */
+export const removeAdminProfileImage = async () => {
+  const response = await axiosInstance.delete(`${API_BASE_URL}/admin/profile/image`);
+  return response.data;
+};
 
 /** Get global user directory */
 export const getGlobalUsers = async () => {

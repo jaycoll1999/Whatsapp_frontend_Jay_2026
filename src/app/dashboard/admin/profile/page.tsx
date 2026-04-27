@@ -1,13 +1,13 @@
 "use client"
 
-import { User, Mail, Shield, Calendar, MapPin, Phone, Edit2, Camera, CheckCircle2, Lock, Bell, Globe } from "lucide-react"
+import { User, Mail, Shield, Calendar, MapPin, Phone, Edit2, Camera, Trash2, CheckCircle2, Lock, Bell, Globe } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 import React, { useRef } from "react";
-import { getAdminProfile, updateAdminProfile, uploadAdminProfileImage } from "@/config/api";
+import { getAdminProfile, updateAdminProfile, uploadAdminProfileImage, removeAdminProfileImage } from "@/config/api";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { API_BASE_URL } from "@/config/constants";
@@ -86,6 +86,24 @@ export default function AdminProfilePage() {
             setUploading(false);
         }
     };
+    const handleRemoveImage = async () => {
+        if (!confirm("Are you sure you want to remove your profile photo?")) return;
+
+        setUploading(true);
+        try {
+            await removeAdminProfileImage();
+            setAdminData((prev: any) => ({
+                ...prev,
+                profile_image: null
+            }));
+            alert("Profile photo removed successfully.");
+        } catch (error) {
+            console.error("Failed to remove image", error);
+            alert("Failed to remove profile photo. Please try again.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     // Construct full image URL
     const getImageUrl = (path: string) => {
@@ -144,6 +162,16 @@ export default function AdminProfilePage() {
                         >
                             <Camera className="w-4 h-4" />
                         </button>
+                        {adminData.profile_image && (
+                            <button 
+                                onClick={handleRemoveImage}
+                                disabled={uploading}
+                                className="absolute bottom-4 -right-2 p-2 bg-rose-600 rounded-full text-white shadow-lg hover:bg-rose-700 transition-colors disabled:opacity-50 z-10"
+                                title="Remove Photo"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                            </button>
+                        )}
                     </div>
                     <div className="space-y-4">
                         <div>
