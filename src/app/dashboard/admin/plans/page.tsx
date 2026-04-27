@@ -460,6 +460,21 @@ export default function AdminPlansPage() {
         )
     }
 
+    if (isLoading && !isCheckout) {
+        return (
+            <div className="flex h-[70vh] items-center justify-center flex-col space-y-6 animate-in fade-in duration-700">
+                 <div className="relative">
+                    <div className="w-20 h-20 rounded-3xl border-4 border-indigo-600/20 border-t-indigo-600 animate-spin transition-all"></div>
+                    <ShieldCheck className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                 </div>
+                 <div className="text-center space-y-2">
+                    <p className="font-black text-slate-900 dark:text-white text-xl tracking-tighter uppercase">Synchronizing Tiers</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Infrastructure Management • Subscription Engine</p>
+                 </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 relative">
             <Script 
