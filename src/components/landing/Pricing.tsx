@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const plans = [
     {
