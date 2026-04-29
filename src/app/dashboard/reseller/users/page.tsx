@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { businessService, BusinessProfile } from "@/services/businessService"
 import { useModal } from "@/context/ModalContext"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -38,7 +38,7 @@ export default function ResellerUsersPage() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("resellerToken")
-      let resellerId = localStorage.getItem("reseller_id") || localStorage.getItem("user_id")
+      const resellerId = localStorage.getItem("reseller_id") || localStorage.getItem("user_id")
       if (!token || !resellerId || resellerId === "undefined") {
         setError("Authentication session invalid. Please log in."); setLoading(false); return
       }
@@ -77,6 +77,15 @@ export default function ResellerUsersPage() {
     </div>
   )
 
+  if (error) return (
+    <div className="flex h-[70vh] items-center justify-center">
+      <div className="text-center">
+        <p className="text-red-500 font-medium mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()} variant="outline">Try Again</Button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="max-w-[1600px] mx-auto space-y-6 page-enter">
 
@@ -103,7 +112,7 @@ export default function ResellerUsersPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
         {statConfig.map((s) => {
           const Icon = s.icon
-          const val = analytics ? (analytics as any)[s.key] ?? 0 : 0
+          const val = analytics ? (analytics as Record<string, number>)[s.key] ?? 0 : 0
           return (
             <div key={s.key} className="rounded-2xl p-5 border flex items-start justify-between gap-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
               style={{background:s.bg, borderColor:s.border}}>
@@ -166,7 +175,7 @@ export default function ResellerUsersPage() {
                   </TableCell>
                 </TableRow>
               ) : filtered.map((user, idx) => {
-                const isConnected = user.whatsapp_mode === "connected" || user.status === "active"
+                const isConnected = user.connection_status === "connected"
                 const remaining = user.wallet?.credits_remaining ?? 0
                 const total     = user.wallet?.credits_allocated ?? 0
                 return (
@@ -178,7 +187,7 @@ export default function ResellerUsersPage() {
                         <p className="text-sm font-semibold text-slate-800">{user.profile.name}</p>
                         <p className="text-xs text-slate-400 mt-0.5">{user.profile.email}</p>
                         <p className="text-[10px] text-slate-300 mt-0.5 uppercase tracking-wide">
-                          Joined: {(user as any).joined_at ? new Date((user as any).joined_at).toLocaleDateString("en-IN") : "—"}
+                          Joined: {user.profile.created_at ? new Date(user.profile.created_at).toLocaleDateString("en-IN") : "—"}
                         </p>
                       </div>
                     </TableCell>
@@ -191,7 +200,7 @@ export default function ResellerUsersPage() {
                     </TableCell>
                     <TableCell className="py-4">
                       <span className="inline-flex items-center gap-1 bg-[#F0FDF9] text-[#128C7E] border border-[#A7F3D0] rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase">
-                        {(user as any).plan?.plan_name || "—"}
+                        {user.plan_name || "—"}
                       </span>
                     </TableCell>
                     <TableCell className="py-4">
@@ -206,7 +215,7 @@ export default function ResellerUsersPage() {
                           : "bg-slate-50 text-slate-500 border border-slate-200"
                       )}>
                         <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", isConnected ? "bg-green-500 pulse-dot" : "bg-slate-300")} />
-                        {isConnected ? "Active" : "Inactive"}
+                        {isConnected ? "Connected" : "Disconnected"}
                       </span>
                     </TableCell>
                     <TableCell className="py-4 pr-6 text-right">
