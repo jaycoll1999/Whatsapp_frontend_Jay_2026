@@ -21,8 +21,9 @@ export default function AdminProfilePage() {
     const [saving, setSaving] = React.useState(false);
     const [uploading, setUploading] = React.useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [errors, setErrors] = React.useState<any>({});
     const [editForm, setEditForm] = React.useState({
-        name: "", phone: "", location: "", bio: "", business_name: "", gstin: ""
+        name: "", email: "", phone: "", location: "", bio: "", business_name: "", gstin: ""
     });
 
     React.useEffect(() => {
@@ -32,6 +33,7 @@ export default function AdminProfilePage() {
                 setAdminData(data);
                 setEditForm({
                     name: data.name || "",
+                    email: data.email || "",
                     phone: data.phone === "Not Provided" ? "" : (data.phone || ""),
                     location: data.location === "Global System Server" ? "" : (data.location || ""),
                     bio: data.bio || "",
@@ -47,14 +49,62 @@ export default function AdminProfilePage() {
         fetchProfile();
     }, []);
 
+    const validateForm = () => {
+        const newErrors: any = {};
+        
+        // Email
+        if (!editForm.email?.trim()) {
+            newErrors.email = "Email address is required";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
+            newErrors.email = "Invalid email format";
+        }
+
+        // Phone
+        if (!editForm.phone?.trim()) {
+            newErrors.phone = "Phone number is required";
+        } else {
+            const cleanPhone = editForm.phone.replace("+", "").trim();
+            if (!/^\d+$/.test(cleanPhone) || cleanPhone.length < 10 || cleanPhone.length > 15) {
+                newErrors.phone = "Enter valid phone number (10-15 digits)";
+            }
+        }
+
+        // Company Name
+        if (!editForm.business_name?.trim()) {
+            newErrors.business_name = "Company name is required";
+        } else if (editForm.business_name.trim().length < 2) {
+            newErrors.business_name = "Minimum 2 characters required";
+        } else if (/^\d+$/.test(editForm.business_name.trim())) {
+            newErrors.business_name = "Company name cannot be only numeric";
+        }
+
+        // GSTIN (Optional)
+        if (editForm.gstin?.trim()) {
+            const gstin = editForm.gstin.trim();
+            // Simplified check for GSTIN: 15 alphanumeric characters
+            if (!/^[a-zA-Z0-9]{15}$/.test(gstin)) {
+                newErrors.gstin = "Invalid GSTIN format (15-character alphanumeric required)";
+            }
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSave = async () => {
+        if (!validateForm()) return;
         setSaving(true);
         try {
-            await updateAdminProfile(editForm);
+            const res = await updateAdminProfile(editForm);
+            if (res.status === false) {
+                alert(res.message);
+                return;
+            }
             // Re-fetch to update state cleanly
             const data = await getAdminProfile();
             setAdminData(data);
             setIsEditing(false);
+            setErrors({});
         } catch (error) {
             console.error("Failed to update profile", error);
             alert("Failed to save profile. Please try again.");
@@ -269,27 +319,38 @@ export default function AdminProfilePage() {
                                     <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all">
                                         <Mail className="w-4 h-4" />
                                     </div>
-                                    <div className="overflow-hidden">
+                                    <div className="flex-1 overflow-hidden">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</p>
-                                        <p className="text-sm font-bold text-slate-900 truncate" title={adminData.email}>{adminData.email}</p>
+                                        {isEditing ? (
+                                            <Input 
+                                                value={editForm.email} 
+                                                onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                                                className={`h-8 mt-1 font-bold ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                                                placeholder="admin@example.com"
+                                            />
+                                        ) : (
+                                            <p className="text-sm font-bold text-slate-900 truncate" title={adminData.email}>{adminData.email}</p>
+                                        )}
+                                        {errors.email && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.email}</p>}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4 group">
                                     <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all">
                                         <Phone className="w-4 h-4" />
                                     </div>
-                                    <div>
+                                    <div className="flex-1 overflow-hidden">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Phone Number</p>
                                         {isEditing ? (
                                             <Input 
                                                 value={editForm.phone} 
                                                 onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                                                className="h-8 mt-1 font-bold"
+                                                className={`h-8 mt-1 font-bold ${errors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                                                 placeholder="+91 9876543210"
                                             />
                                         ) : (
                                             <p className="text-sm font-bold text-slate-900">{adminData.phone}</p>
                                         )}
+                                        {errors.phone && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.phone}</p>}
                                     </div>
                                 </div>
 
@@ -304,12 +365,13 @@ export default function AdminProfilePage() {
                                             <Input 
                                                 value={editForm.business_name} 
                                                 onChange={(e) => setEditForm({...editForm, business_name: e.target.value})}
-                                                className="h-8 mt-1 font-bold"
+                                                className={`h-8 mt-1 font-bold ${errors.business_name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                                                 placeholder="Your Company Name"
                                             />
                                         ) : (
                                             <p className="text-sm font-bold text-slate-900 truncate">{adminData.business_name}</p>
                                         )}
+                                        {errors.business_name && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.business_name}</p>}
                                     </div>
                                 </div>
 
@@ -323,12 +385,13 @@ export default function AdminProfilePage() {
                                             <Input 
                                                 value={editForm.gstin} 
                                                 onChange={(e) => setEditForm({...editForm, gstin: e.target.value})}
-                                                className="h-8 mt-1 font-bold"
+                                                className={`h-8 mt-1 font-bold ${errors.gstin ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                                                 placeholder="GSTIN"
                                             />
                                         ) : (
                                             <p className="text-sm font-bold text-slate-900 truncate">{adminData.gstin}</p>
                                         )}
+                                        {errors.gstin && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.gstin}</p>}
                                     </div>
                                 </div>
                             </div>

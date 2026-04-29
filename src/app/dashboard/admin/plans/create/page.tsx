@@ -111,19 +111,53 @@ function CreatePlanForm() {
                 return 30
             }
 
+            const creditsNum = parseInt(planData.credits.replace(/,/g, ''))
+            const priceNum = parseFloat(planData.price)
+            const rateNum = parseFloat(planData.rate)
+            const daysNum = getDays(planData.validity)
+
+            // --- Validation Rules ---
+            if (isNaN(creditsNum) || creditsNum <= 0) {
+                alert("Value must be greater than 0: Credits Offered")
+                setIsLoading(false)
+                return
+            }
+            if (isNaN(priceNum) || priceNum <= 0) {
+                alert("Value must be greater than 0: Direct Pricing")
+                setIsLoading(false)
+                return
+            }
+            if (isNaN(rateNum) || rateNum <= 0) {
+                alert("Value must be greater than 0: Unit Costing")
+                setIsLoading(false)
+                return
+            }
+            if (daysNum <= 0) {
+                alert("Value must be greater than 0: Service Life")
+                setIsLoading(false)
+                return
+            }
+
             const payload = {
                 name: planData.name,
-                price: parseFloat(planData.price),
-                credits_offered: parseInt(planData.credits.replace(/,/g, '')),
-                validity_days: getDays(planData.validity),
-                deduction_value: parseFloat(planData.rate),
+                price: priceNum,
+                credits_offered: creditsNum,
+                validity_days: daysNum,
+                deduction_value: rateNum,
                 plan_category: planData.category
             }
 
+            let res: any;
             if (isEdit && editId) {
-                await updatePlan(editId, payload)
+                res = await updatePlan(editId, payload)
             } else {
-                await createPlan(payload)
+                res = await createPlan(payload)
+            }
+            
+            if (res.status === false) {
+                alert(res.message);
+                setIsLoading(false);
+                return;
             }
             
             // Broadcast update to other tabs/dashboards
@@ -262,7 +296,9 @@ function CreatePlanForm() {
                                                 <Input 
                                                     required
                                                     type="number"
-                                                    placeholder="100,000"
+                                                    min="1"
+                                                    step="1"
+                                                    placeholder="10,000"
                                                     value={planData.credits}
                                                     onChange={(e) => setPlanData({...planData, credits: e.target.value})}
                                                     className="h-16 rounded-2xl bg-slate-50/50 dark:bg-slate-800/80 border-slate-100 dark:border-slate-800 font-black text-slate-900 dark:text-white px-6 transition-all focus:ring-4 focus:ring-indigo-500/10"
@@ -303,6 +339,8 @@ function CreatePlanForm() {
                                                 <Input 
                                                     required
                                                     type="number"
+                                                    min="0.01"
+                                                    step="any"
                                                     placeholder="4,999"
                                                     value={planData.price}
                                                     onChange={(e) => setPlanData({...planData, price: e.target.value})}
@@ -320,7 +358,8 @@ function CreatePlanForm() {
                                             <Input 
                                                 required
                                                 type="number"
-                                                step="0.001"
+                                                min="0.001"
+                                                step="any"
                                                 placeholder="0.12"
                                                 value={planData.rate}
                                                 onChange={(e) => setPlanData({...planData, rate: e.target.value})}
