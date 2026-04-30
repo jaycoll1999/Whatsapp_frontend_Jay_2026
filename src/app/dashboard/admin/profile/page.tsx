@@ -63,9 +63,11 @@ export default function AdminProfilePage() {
         if (!editForm.phone?.trim()) {
             newErrors.phone = "Phone number is required";
         } else {
-            const cleanPhone = editForm.phone.replace("+", "").trim();
-            if (!/^\d+$/.test(cleanPhone) || cleanPhone.length < 10 || cleanPhone.length > 15) {
-                newErrors.phone = "Enter valid phone number (10-15 digits)";
+            const phone = editForm.phone.trim();
+            // Match exactly 10 digits OR +91 followed by 10 digits
+            const phoneRegex = /^(\+91)?\d{10}$/;
+            if (!phoneRegex.test(phone)) {
+                newErrors.phone = "Enter a valid 10-digit phone number (optionally with +91)";
             }
         }
 
