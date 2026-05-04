@@ -159,7 +159,7 @@ export default function AdminProfilePage() {
 
     // Construct full image URL
     const getImageUrl = (path: string) => {
-        if (!path) return "";
+        if (!path) return undefined;
         if (path.startsWith('http')) return path;
         // Derive server root from API_BASE_URL (remove last /api)
         const serverRoot = API_BASE_URL.replace(/\/api$/, "");

@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
             
             // Success: Store token using AuthContext
             setTimeout(() => {
-                authLogin(data.access_token, "admin", data.refresh_token)
+                authLogin(data.token, "admin") // Using new token field, no refresh_token in this response
                 router.push("/dashboard/admin")
             }, 800)
             
