@@ -24,6 +24,7 @@ import {
 } from "@/config/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Save } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function AdminUsersPage() {
     const [searchQuery, setSearchQuery] = useState("")
@@ -71,9 +72,11 @@ export default function AdminUsersPage() {
 
     useEffect(() => {
         const fetchUsers = async () => {
+            console.log("Fetching global users...");
             try {
                 const data = await getGlobalUsers();
-                setUsers(data);
+                console.log("Received users data:", data);
+                setUsers(Array.isArray(data) ? data : []);
             } catch (err) {
                 console.error("Failed to load users", err);
             } finally {
@@ -259,7 +262,7 @@ export default function AdminUsersPage() {
         );
     }
 
-    const filteredUsers = users.filter(u => {
+    const filteredUsers = (Array.isArray(users) ? users : []).filter(u => {
         const matchesSearch = (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
                               u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                               u.company?.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -270,6 +273,8 @@ export default function AdminUsersPage() {
 
         return matchesSearch && matchesStatus && matchesRole && matchesType;
     });
+    
+    console.log("Filtered users count:", filteredUsers.length);
 
     const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -487,8 +492,8 @@ export default function AdminUsersPage() {
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan={5} className="px-8 py-10 text-center text-slate-400 font-bold">
-                                            No users found.
+                                        <td colSpan={7} className="px-8 py-10 text-center text-slate-400 font-bold">
+                                            No users found matching your criteria.
                                         </td>
                                     </tr>
                                 )}

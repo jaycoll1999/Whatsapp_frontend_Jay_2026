@@ -460,7 +460,10 @@ export default function AdminDashboardPage() {
                                 </div>
                                 <h2 className="text-xl font-black text-slate-900 font-outfit">Top Tier Resellers</h2>
                             </div>
-                            <button className="text-[11px] font-black text-brand-600 uppercase tracking-widest hover:text-brand-700 transition-colors flex items-center gap-1.5">
+                            <button 
+                                onClick={() => router.push("/dashboard/admin/users")}
+                                className="text-[11px] font-black text-brand-600 uppercase tracking-widest hover:text-brand-700 transition-colors flex items-center gap-1.5"
+                            >
                                 Full Directory
                                 <ArrowRight className="w-3 h-3" />
                             </button>

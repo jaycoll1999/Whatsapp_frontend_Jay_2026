@@ -44,6 +44,7 @@ interface Order {
     status: string;
     razorpay_order_id?: string;
     razorpay_payment_id?: string;
+    razorpay_signature?: string;
     allocated_to_user_id?: string;
     allocated_to_name?: string; 
     purchaser_name?: string;     
@@ -63,6 +64,11 @@ export default function AdminOrdersPage() {
     const [statusFilter, setStatusFilter] = useState<string>("all")
     const [startDate, setStartDate] = useState<string>("")
     const [endDate, setEndDate] = useState<string>("")
+    const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({})
+
+    const toggleOrderExpansion = (id: string) => {
+        setExpandedOrders(prev => ({ ...prev, [id]: !prev[id] }))
+    }
 
     const fetchOrders = useCallback(async () => {
         setIsLoading(true)
@@ -371,16 +377,39 @@ export default function AdminOrdersPage() {
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-4 h-full">
+                                        <div className="flex flex-col md:flex-row md:items-end justify-between md:justify-start gap-4 h-full">
                                             <div className="text-3xl font-black text-slate-900 tracking-tighter tabular-nums">
                                                 ₹{order.amount.toLocaleString()}
                                             </div>
-                                            <Button variant="ghost" size="sm" className="rounded-xl px-4 font-black text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 group">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => toggleOrderExpansion(order.id)}
+                                                className={`rounded-xl px-4 font-black transition-all ${expandedOrders[order.id] ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'} group`}
+                                            >
                                                 Transaction
-                                                <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-0.5" />
+                                                <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${expandedOrders[order.id] ? 'rotate-180' : ''}`} />
                                             </Button>
                                         </div>
                                     </div>
+
+                                    {/* Expanded Transaction Details */}
+                                    {expandedOrders[order.id] && (
+                                        <div className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in slide-in-from-top-2 duration-300">
+                                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Razorpay Order ID</p>
+                                                <p className="text-xs font-bold text-slate-900 break-all">{order.razorpay_order_id || 'N/A'}</p>
+                                            </div>
+                                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Razorpay Payment ID</p>
+                                                <p className="text-xs font-bold text-slate-900 break-all">{order.razorpay_payment_id || 'N/A'}</p>
+                                            </div>
+                                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Razorpay Signature</p>
+                                                <p className="text-xs font-bold text-slate-900 break-all truncate">{order.razorpay_signature || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ))
                         )}
