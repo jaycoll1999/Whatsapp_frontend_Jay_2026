@@ -38,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("reseller_id");
     localStorage.removeItem("resellerToken");
     localStorage.removeItem("admin_logged_in");
+    localStorage.removeItem("lastActivity");
     setToken(null);
     setRole(null);
     setUser(null);

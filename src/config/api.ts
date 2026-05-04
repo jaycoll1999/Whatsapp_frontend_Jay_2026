@@ -153,3 +153,29 @@ export const getAdminOrders = async (params: any = {}) => {
   const response = await axiosInstance.get(`${API_BASE_URL}/admin/orders`, { params });
   return response.data;
 };
+
+// -------------------------------------------------
+// Dictionary API helper functions
+// -------------------------------------------------
+
+export const getDictionary = async (entityId: string) => {
+  const response = await axiosInstance.get(`${API_BASE_URL}/admin/dictionary`, {
+    params: { entity_id: entityId }
+  });
+  return response.data;
+};
+
+export const addDictionaryEntry = async (data: { entity_id: string; entity_type: string; key: string; value: string }) => {
+  const response = await axiosInstance.post(`${API_BASE_URL}/admin/dictionary`, data);
+  return response.data;
+};
+
+export const updateDictionaryEntry = async (id: string, data: { key?: string; value?: string }) => {
+  const response = await axiosInstance.put(`${API_BASE_URL}/admin/dictionary/${id}`, data);
+  return response.data;
+};
+
+export const deleteDictionaryEntry = async (id: string) => {
+  const response = await axiosInstance.delete(`${API_BASE_URL}/admin/dictionary/${id}`);
+  return response.data;
+};

@@ -3,12 +3,16 @@
 import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { AdminSidebar } from "@/components/layout/AdminSidebar"
+import { useInactivityTracker } from "@/hooks/useInactivityTracker"
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const router = useRouter()
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
     const [isMounted, setIsMounted] = useState(false)
+
+    // Enable inactivity tracking (5 minutes threshold)
+    useInactivityTracker(5)
 
     useEffect(() => {
         setIsMounted(true)

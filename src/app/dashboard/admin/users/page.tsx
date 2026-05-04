@@ -18,13 +18,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { getGlobalUsers, deleteGlobalUser, updateGlobalUser } from "@/config/api";
+import { 
+    getGlobalUsers, deleteGlobalUser, updateGlobalUser, 
+    getDictionary, addDictionaryEntry, updateDictionaryEntry, deleteDictionaryEntry 
+} from "@/config/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Plus, Save } from "lucide-react";
 
 export default function AdminUsersPage() {
     const [searchQuery, setSearchQuery] = useState("")
     const [statusFilter, setStatusFilter] = useState("all")
     const [roleFilter, setRoleFilter] = useState("all")
+    const [typeFilter, setTypeFilter] = useState("all")
     const [users, setUsers] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
@@ -47,6 +52,11 @@ export default function AdminUsersPage() {
         message: ''
     });
 
+    const [dictionary, setDictionary] = useState<any[]>([]);
+    const [isDictLoading, setIsDictLoading] = useState(false);
+    const [newDictEntry, setNewDictEntry] = useState({ key: "", value: "" });
+    const [editingDictId, setEditingDictId] = useState<string | null>(null);
+
     const showNotification = (type: 'success' | 'error' | 'info', title: string, message: string) => {
         setNotification({ show: true, type, title, message });
         setTimeout(() => {
@@ -57,7 +67,7 @@ export default function AdminUsersPage() {
     // Reset to first page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, statusFilter, roleFilter]);
+    }, [searchQuery, statusFilter, roleFilter, typeFilter]);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -98,8 +108,47 @@ export default function AdminUsersPage() {
     };
 
     const router = useRouter();
-    const handleViewUser = (user: any) => {
-        router.push(`/dashboard/admin/users/${user.id}?from=directory`);
+    const handleViewUser = async (user: any) => {
+        setViewUser(user);
+        setIsViewModalOpen(true);
+        
+        // Load dictionary entries
+        setIsDictLoading(true);
+        try {
+            const data = await getDictionary(user.id);
+            setDictionary(data);
+        } catch (err) {
+            console.error("Failed to load dictionary", err);
+        } finally {
+            setIsDictLoading(false);
+        }
+    };
+
+    const handleAddDictEntry = async () => {
+        if (!newDictEntry.key || !newDictEntry.value || !viewUser) return;
+        try {
+            const data = await addDictionaryEntry({
+                entity_id: viewUser.id,
+                entity_type: viewUser.type,
+                key: newDictEntry.key,
+                value: newDictEntry.value
+            });
+            setDictionary(prev => [...prev, data]);
+            setNewDictEntry({ key: "", value: "" });
+            showNotification('success', 'Entry Added', 'New dictionary entry has been added successfully.');
+        } catch (err) {
+            showNotification('error', 'Action Failed', 'Could not add dictionary entry.');
+        }
+    };
+
+    const handleDeleteDictEntry = async (id: string) => {
+        try {
+            await deleteDictionaryEntry(id);
+            setDictionary(prev => prev.filter(e => e.id !== id));
+            showNotification('success', 'Entry Removed', 'Dictionary entry has been deleted.');
+        } catch (err) {
+            showNotification('error', 'Action Failed', 'Could not delete entry.');
+        }
     };
 
     const handleEditUser = (user: any) => {
@@ -217,8 +266,9 @@ export default function AdminUsersPage() {
         
         const matchesStatus = statusFilter === "all" || u.status === statusFilter;
         const matchesRole = roleFilter === "all" || u.role === roleFilter;
+        const matchesType = typeFilter === "all" || u.type === typeFilter;
 
-        return matchesSearch && matchesStatus && matchesRole;
+        return matchesSearch && matchesStatus && matchesRole && matchesType;
     });
 
     const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
@@ -310,6 +360,19 @@ export default function AdminUsersPage() {
                                 <SelectItem value="Managed User" className="font-bold text-indigo-600">Managed User</SelectItem>
                             </SelectContent>
                         </Select>
+
+                        <Select value={typeFilter} onValueChange={setTypeFilter}>
+                            <SelectTrigger className="h-12 w-[160px] rounded-xl border-slate-200 font-bold text-slate-600 hover:bg-slate-50 focus:ring-indigo-600/10">
+                                <Filter className="w-4 h-4 mr-2" />
+                                <SelectValue placeholder="All Types" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                                <SelectItem value="all" className="font-bold text-slate-600">All Types</SelectItem>
+                                <SelectItem value="user" className="font-bold text-indigo-600">Direct User</SelectItem>
+                                <SelectItem value="reseller" className="font-bold text-indigo-600">Reseller</SelectItem>
+                                <SelectItem value="subuser" className="font-bold text-indigo-600">Subuser</SelectItem>
+                            </SelectContent>
+                        </Select>
                         
                         <Button 
                             variant="outline" 
@@ -335,6 +398,7 @@ export default function AdminUsersPage() {
                                         </div>
                                     </th>
                                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Company / Workspace</th>
+                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Type</th>
                                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Status</th>
                                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Member Since</th>
                                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Created By</th>
@@ -344,7 +408,11 @@ export default function AdminUsersPage() {
                             <tbody className="divide-y divide-slate-50">
                                 {paginatedUsers.length > 0 ? paginatedUsers
                                     .map((user) => (
-                                    <tr key={user.id} className="group hover:bg-slate-50/50 transition-colors duration-200">
+                                    <tr 
+                                        key={user.id} 
+                                        className="group hover:bg-slate-50/50 transition-colors duration-200 cursor-pointer"
+                                        onClick={() => handleViewUser(user)}
+                                    >
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-4">
                                                 <Avatar className="h-12 w-12 border-2 border-white shadow-md">
@@ -363,6 +431,16 @@ export default function AdminUsersPage() {
                                                 <p className="text-sm font-black text-slate-700">{user.company}</p>
                                                 <p className="text-[10px] uppercase font-black tracking-widest text-indigo-500/70">{user.role}</p>
                                             </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <Badge className={cn(
+                                                "font-black text-[10px] uppercase tracking-wider px-2 py-1",
+                                                user.type === "reseller" ? "bg-purple-100 text-purple-700 border-purple-200" :
+                                                user.type === "subuser" ? "bg-amber-100 text-amber-700 border-amber-200" :
+                                                "bg-blue-100 text-blue-700 border-blue-200"
+                                            )}>
+                                                {user.type}
+                                            </Badge>
                                         </td>
                                         <td className="px-8 py-6">
                                             {getStatusBadge(user.status)}
@@ -476,8 +554,8 @@ export default function AdminUsersPage() {
                     <div className="p-8 space-y-6">
                         <div className="grid grid-cols-2 gap-6">
                             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Role</p>
-                                <p className="font-bold text-slate-700 dark:text-slate-300">{viewUser?.role}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Entity Type</p>
+                                <p className="font-bold text-slate-700 dark:text-slate-300 uppercase text-xs">{viewUser?.type}</p>
                             </div>
                             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Status</p>
@@ -493,16 +571,61 @@ export default function AdminUsersPage() {
                                     {viewUser?.joined !== "Unknown" ? new Date(viewUser?.joined).toLocaleDateString() : "Unknown"}
                                 </p>
                             </div>
-                            <div className="col-span-2 bg-indigo-50/50 dark:bg-indigo-900/20 p-4 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/30">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-1 flex items-center gap-2">
-                                    <Clock className="w-3 h-3" />
-                                    Active Plan
-                                </p>
-                                <p className="font-bold text-indigo-700 dark:text-indigo-300 text-lg">{viewUser?.plan || "No Plan Active"}</p>
-                            </div>
-                            <div className="col-span-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">User ID</p>
-                                <p className="font-bold text-slate-700 dark:text-slate-300 text-xs break-all">{viewUser?.id}</p>
+                        </div>
+
+                        {/* Dictionary Section */}
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-black uppercase tracking-tighter text-slate-900 dark:text-white flex items-center gap-2">
+                                Entity Dictionary
+                                <Badge variant="outline" className="text-[10px]">{dictionary.length}</Badge>
+                            </h4>
+                            
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
+                                {/* Add Entry */}
+                                <div className="flex gap-2">
+                                    <Input 
+                                        placeholder="Key" 
+                                        className="h-9 text-xs rounded-lg"
+                                        value={newDictEntry.key}
+                                        onChange={(e) => setNewDictEntry({...newDictEntry, key: e.target.value})}
+                                    />
+                                    <Input 
+                                        placeholder="Value" 
+                                        className="h-9 text-xs rounded-lg"
+                                        value={newDictEntry.value}
+                                        onChange={(e) => setNewDictEntry({...newDictEntry, value: e.target.value})}
+                                    />
+                                    <Button size="sm" className="h-9 px-3 rounded-lg bg-indigo-600" onClick={handleAddDictEntry}>
+                                        <Plus className="w-4 h-4" />
+                                    </Button>
+                                </div>
+
+                                <div className="h-[150px] pr-4 overflow-y-auto custom-scrollbar">
+                                    <div className="space-y-2">
+                                        {isDictLoading ? (
+                                            <p className="text-center text-[10px] font-bold text-slate-400 py-4 animate-pulse uppercase">Syncing Dictionary...</p>
+                                        ) : dictionary.length > 0 ? (
+                                            dictionary.map((entry) => (
+                                                <div key={entry.id} className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 group/item">
+                                                    <div className="min-w-0 flex-1">
+                                                        <span className="text-[10px] font-black text-indigo-600 block leading-tight">{entry.key}</span>
+                                                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400 block truncate">{entry.value}</span>
+                                                    </div>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-7 w-7 text-rose-500 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                                        onClick={() => handleDeleteDictEntry(entry.id)}
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-center text-[10px] font-bold text-slate-400 py-4 uppercase tracking-widest">No dictionary entries</p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
