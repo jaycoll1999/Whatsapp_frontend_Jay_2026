@@ -69,7 +69,7 @@ function LoginPageContent() {
 
         } catch (err: any) {
             console.error("❌ Login error:", err)
-            setError(err.response?.data?.detail || "Invalid email or password.")
+            setError(err.response?.data?.message || err.response?.data?.detail || "Invalid email or password.")
         } finally {
             console.log("🏁 Login attempt finished.");
             setIsLoading(false)
