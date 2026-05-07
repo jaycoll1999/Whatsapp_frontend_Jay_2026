@@ -49,6 +49,11 @@ interface PlanData {
     assigned_by_role?: string
     credits_allocated?: number
     credits_used?: number
+    reseller?: {
+        name: string;
+        phone: string;
+        email: string;
+    }
 }
 
 declare global {
@@ -592,6 +597,28 @@ export default function PlansPage() {
                                                                     </div>
                                                                 </div>
                                                                 <p className="text-[10px] text-red-600 font-bold italic pt-1">Please contact your reseller to recharge their wallet.</p>
+                                                                
+                                                                {data?.reseller && (
+                                                                    <div className="mt-3 pt-3 border-t border-red-100 space-y-2">
+                                                                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">Reseller Contact Details:</p>
+                                                                        <div className="space-y-1.5">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <UserCheck className="w-3 h-3 text-red-500" />
+                                                                                <span className="text-[11px] font-bold text-red-900">{data.reseller.name}</span>
+                                                                            </div>
+                                                                            {data.reseller.phone && (
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <Phone className="w-3 h-3 text-red-500" />
+                                                                                    <a href={`tel:${data.reseller.phone}`} className="text-[11px] font-bold text-red-700 hover:underline">{data.reseller.phone}</a>
+                                                                                </div>
+                                                                            )}
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Mail className="w-3 h-3 text-red-500" />
+                                                                                <a href={`mailto:${data.reseller.email}`} className="text-[11px] font-bold text-red-700 hover:underline">{data.reseller.email}</a>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )
                                                     }
