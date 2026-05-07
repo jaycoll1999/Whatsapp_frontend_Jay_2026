@@ -239,7 +239,7 @@ export default function UserDetailPage({ params, searchParams }: PageProps) {
                                         </select>
                                     </div>
                                     <div className="space-y-2 md:col-span-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Wallet</label>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Total Credits</label>
                                         <Input value={formData.wallet.credits_allocated} onChange={(e) => handleChange('wallet', 'credits_allocated', e.target.value)} className="h-12 border-slate-200 rounded-lg text-slate-700 font-semibold" />
                                     </div>
                                     <div className="space-y-2 md:col-span-1">
@@ -269,12 +269,11 @@ export default function UserDetailPage({ params, searchParams }: PageProps) {
                 /* Original View Profile Logic - Redacted here for brevity but kept in file */
                 <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
                     {/* Analytics Summary Stats Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {[
                             { label: "TOTAL CREDITS", value: user.wallet.credits_allocated, color: "bg-gradient-to-br from-blue-600 to-blue-700", icon: CreditCard },
                             { label: "USED CREDITS", value: user.wallet.credits_used, color: "bg-gradient-to-br from-indigo-600 to-indigo-800" },
-                            { label: "REMAINING CREDITS", value: user.wallet.credits_remaining, color: "bg-gradient-to-br from-emerald-500 to-emerald-600" },
-                            { label: "WALLET BALANCE", value: "₹0", color: "bg-gradient-to-br from-orange-500 to-orange-600" }
+                            { label: "REMAINING CREDITS", value: user.wallet.credits_remaining, color: "bg-gradient-to-br from-emerald-500 to-emerald-600" }
                         ].map((stat, i) => (
                             <div key={i} className={`${stat.color} p-5 rounded-2xl shadow-xl shadow-slate-200/50 text-white flex flex-col justify-center min-h-[90px] border border-white/10 hover:scale-[1.02] transition-transform cursor-default`}>
                                 <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em] mb-1">{stat.label}</p>

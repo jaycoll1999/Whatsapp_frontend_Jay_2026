@@ -2,7 +2,7 @@ import axiosInstance from "@/config/axios";
 
 export const getMe = async () => {
     try {
-        const response = await axiosInstance.get(`/auth/me`);
+        const response = await axiosInstance.get(`auth/me`);
         return response.data;
     } catch (error: any) {
         console.error("AxiosError in getMe:");
@@ -23,7 +23,7 @@ export const logout = async () => {
     // We can call specific logout endpoints if needed, 
     // but the most important part is clearing the local state.
     try {
-        await axiosInstance.post(`/auth/logout`);
+        await axiosInstance.post(`auth/logout`);
     } catch (error) {
         // Ignore error on logout
     }

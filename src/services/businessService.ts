@@ -1,7 +1,7 @@
 import axios from '@/config/axios';
 import { API_BASE_URL } from '@/config/constants';
 
-const API_URL = `${API_BASE_URL}/busi_users`; // Base URL for business users
+const API_URL = 'busi_users'; // Relative to API_BASE_URL (which ends with /)
 
 export interface BusinessRegisterData {
     parent_reseller_id: string;
@@ -90,7 +90,7 @@ export const businessService = {
 
     // Login as a Business User
     login: async (data: BusinessLoginData) => {
-        const response = await axios.post(`${API_URL}/login`, data, { timeout: 15000 }); // 15s timeout
+        const response = await axios.post(`${API_URL}/login`, data);
         return response.data;
     },
 

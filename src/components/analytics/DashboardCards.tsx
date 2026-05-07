@@ -1,14 +1,13 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { DollarSign, BarChart3, PieChart, Wallet } from "lucide-react"
+import { DollarSign, BarChart3, PieChart } from "lucide-react"
 
 interface DashboardCardsProps {
     data: {
         total_credits: number
         used_credits: number
         remaining_credits: number
-        wallet_balance: number
     } | null
     loading: boolean
 }
@@ -67,18 +66,6 @@ const cards = [
         textColor: "#15803D",
         borderColor: "#BBF7D0",
     },
-    {
-        key: "wallet_balance" as const,
-        label: "Wallet Balance",
-        sublabel: "Current account balance",
-        icon: Wallet,
-        bg: "#FFFBEB",
-        iconBg: "#FEF3C7",
-        iconColor: "#D97706",
-        textColor: "#B45309",
-        borderColor: "#FDE68A",
-        prefix: "₹",
-    },
 ]
 
 function StatCard({ card, value, delay }: { card: typeof cards[0]; delay: number; value: number }) {
@@ -118,8 +105,8 @@ function StatCard({ card, value, delay }: { card: typeof cards[0]; delay: number
 export default function DashboardCards({ data, loading }: DashboardCardsProps) {
     if (loading) {
         return (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(3)].map((_, i) => (
                     <div key={i} className="rounded-2xl p-5 border border-slate-100 bg-white">
                         <div className="flex justify-between items-start gap-4">
                             <div className="flex-1 space-y-2">
@@ -137,21 +124,15 @@ export default function DashboardCards({ data, loading }: DashboardCardsProps) {
 
     if (!data) return null
 
-    console.log('=== DASHBOARD CARDS DEBUG ===');
-    console.log('Data received:', data);
-    console.log('total_credits:', data.total_credits);
-    console.log('used_credits:', data.used_credits);
-    console.log('remaining_credits:', data.remaining_credits);
 
     const values: Record<string, number> = {
         total_credits: data.total_credits,
         used_credits: data.used_credits,
         remaining_credits: data.remaining_credits,  // Use remaining_credits from analytics API
-        wallet_balance: data.remaining_credits,  // Use remaining_credits for wallet balance
     }
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 stagger-children">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 stagger-children">
             {cards.map((card, i) => (
                 <StatCard key={card.key} card={card} value={values[card.key]} delay={i * 0.05} />
             ))}

@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from './constants';
 
 const axiosInstance = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: `${API_BASE_URL}/`,
 });
 
 // Request interceptor: attach access token
@@ -104,7 +104,7 @@ axiosInstance.interceptors.response.use(
 
             try {
                 // Perform the refresh
-                const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
+                const response = await axios.post(`auth/refresh-token`, {
                     refresh_token: refreshToken
                 });
 

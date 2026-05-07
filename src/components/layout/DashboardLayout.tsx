@@ -8,6 +8,7 @@ import { UserSidebar } from "@/components/layout/UserSidebar"
 import { AdminSidebar } from "@/components/layout/AdminSidebar"
 import userService from "@/services/userService"
 
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const router = useRouter()
@@ -145,6 +146,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
                 {children}
             </main>
+
+
         </div>
     )
 }

@@ -58,14 +58,8 @@ export default function AnalyticsPage() {
             setError(null);
             const dashboard = await analyticsService.getResellerDashboard(user.user_id);
             
-            console.log('=== ANALYTICS PAGE DEBUG ===');
-            console.log('Analytics API Response:', dashboard);
-            console.log('total_credits:', dashboard.total_credits);
-            console.log('used_credits:', dashboard.used_credits);
-            console.log('remaining_credits:', dashboard.remaining_credits);
-            console.log('messages_sent:', dashboard.messages_sent);
-            
-            setData(dashboard);
+            const { wallet_balance, ...restOfData } = dashboard;
+            setData(restOfData as ResellerDashboardResponse);
         } catch (error) {
             console.error("Failed to fetch analytics", error);
             setError("Failed to load analytics data.");

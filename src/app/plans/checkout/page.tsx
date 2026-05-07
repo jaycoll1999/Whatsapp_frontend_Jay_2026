@@ -263,7 +263,19 @@ function CheckoutContent() {
 
         } catch (error: any) {
             console.error("Purchase failed:", error)
-            alert(error.response?.data?.detail || error.message || "Failed to process purchase. Please try again.")
+            const detail = error.response?.data?.detail
+            if (typeof detail === 'object' && detail.error_type === 'insufficient_reseller_credits') {
+                alert(
+                    `RESSELLER INSUFFICIENT CREDITS\n\n` +
+                    `Your reseller does not have enough credits to fulfill this purchase.\n` +
+                    `Available: ${detail.reseller_credits}\n` +
+                    `Required: ${detail.plan_cost}\n` +
+                    `Shortfall: ${detail.shortfall}\n\n` +
+                    `Please contact your reseller.`
+                )
+            } else {
+                alert(detail || error.message || "Failed to process purchase. Please try again.")
+            }
         } finally {
             setIsLoading(false)
         }

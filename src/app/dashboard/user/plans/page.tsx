@@ -247,7 +247,12 @@ export default function PlansPage() {
             }
         } catch (err: any) {
             setCheckoutStatus('error')
-            setCheckoutMessage(err.response?.data?.detail || "Purchase failed. Please try again.")
+            const detail = err.response?.data?.detail
+            if (typeof detail === 'object' && detail.error_type === 'insufficient_reseller_credits') {
+                setCheckoutMessage(JSON.stringify(detail))
+            } else {
+                setCheckoutMessage(detail || "Purchase failed. Please try again.")
+            }
         }
     }
 
@@ -560,12 +565,43 @@ export default function PlansPage() {
                                     <p className="text-slate-500 font-medium">Your plan has been upgraded and credits added.</p>
                                 </div>
                             ) : checkoutStatus === 'error' ? (
-                                <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-start gap-3">
-                                    <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-bold text-red-900">Purchase Failed</p>
-                                        <p className="text-xs text-red-800/70 leading-relaxed font-medium">{checkoutMessage}</p>
-                                        <button onClick={() => setCheckoutStatus('idle')} className="text-[10px] font-black uppercase text-red-600 hover:underline pt-2 inline-block">Try Again</button>
+                                <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex flex-col gap-3">
+                                    <div className="flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-bold text-red-900">Purchase Failed</p>
+                                            {(() => {
+                                                try {
+                                                    const detail = JSON.parse(checkoutMessage);
+                                                    if (detail.error_type === 'insufficient_reseller_credits') {
+                                                        return (
+                                                            <div className="space-y-2 mt-2">
+                                                                <p className="text-xs text-red-800/80 font-medium">Your reseller does not have enough credits to fulfill this plan purchase.</p>
+                                                                <div className="grid grid-cols-2 gap-2 bg-white/50 p-3 rounded-xl border border-red-100">
+                                                                    <div>
+                                                                        <p className="text-[9px] font-bold text-red-400 uppercase">Available</p>
+                                                                        <p className="text-sm font-bold text-red-700">{detail.reseller_credits.toLocaleString()}</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[9px] font-bold text-red-400 uppercase">Required</p>
+                                                                        <p className="text-sm font-bold text-red-700">{detail.plan_cost.toLocaleString()}</p>
+                                                                    </div>
+                                                                    <div className="col-span-2 pt-1 border-t border-red-100">
+                                                                        <p className="text-[9px] font-bold text-red-400 uppercase">Shortfall</p>
+                                                                        <p className="text-sm font-black text-red-600">{detail.shortfall.toLocaleString()} credits</p>
+                                                                    </div>
+                                                                </div>
+                                                                <p className="text-[10px] text-red-600 font-bold italic pt-1">Please contact your reseller to recharge their wallet.</p>
+                                                            </div>
+                                                        )
+                                                    }
+                                                } catch {
+                                                    return <p className="text-xs text-red-800/70 leading-relaxed font-medium">{checkoutMessage}</p>
+                                                }
+                                                return <p className="text-xs text-red-800/70 leading-relaxed font-medium">{checkoutMessage}</p>
+                                            })()}
+                                            <button onClick={() => setCheckoutStatus('idle')} className="text-[10px] font-black uppercase text-red-600 hover:underline pt-2 inline-block">Try Again</button>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (

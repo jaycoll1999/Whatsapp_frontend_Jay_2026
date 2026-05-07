@@ -1,7 +1,7 @@
 import axios from '@/config/axios';
 import { API_BASE_URL } from '@/config/constants';
 
-const API_URL = `${API_BASE_URL}/resellers`;
+const API_URL = 'resellers'; // Relative to API_BASE_URL (which ends with /)
 
 // interface for Reseller data types
 export interface ResellerProfile {

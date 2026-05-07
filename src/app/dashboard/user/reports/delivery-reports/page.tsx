@@ -29,9 +29,17 @@ export default function DeliveryReportsPage() {
     const [showColToggle, setShowColToggle] = useState(false)
     const [density, setDensity] = useState<"compact"|"standard"|"comfortable">("standard")
     const [showDensity, setShowDensity] = useState(false)
+    const [userRole, setUserRole] = useState<string>("")
     const [selected, setSelected] = useState<number[]>([])
 
-    useEffect(() => { fetchReports() }, [])
+    useEffect(() => { 
+        const role = localStorage.getItem("user_role")?.toLowerCase() || "user"
+        setUserRole(role)
+        if (role === "user") {
+            setVisibleCols(prev => prev.filter(c => c !== "Mode"))
+        }
+        fetchReports() 
+    }, [])
 
     const fetchReports = async () => {
         setLoading(true); setError(null)
@@ -69,7 +77,8 @@ export default function DeliveryReportsPage() {
                 `"${(r.message||"").replace(/"/g,'""')}"`,
                 `"${r.from}"`,`"${r.to}"`,
                 `"${r.attachment_url?"Yes":"No"}"`,
-                `"${r.status}"`,`"${r.mode}"`
+                `"${r.status}"`,
+                ...(userRole !== "user" ? [`"${r.mode || ""}"`] : [])
             ].join(","))
         ].join("\n")
         const a=document.createElement("a")
@@ -192,7 +201,7 @@ export default function DeliveryReportsPage() {
                         {showColToggle && (
                             <div className="absolute top-11 left-4 z-50 bg-white shadow-xl border border-slate-100 rounded-xl p-3 min-w-[160px] flex flex-col gap-1.5">
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 mb-1">Toggle Columns</p>
-                                {ALL_COLS.map(col=>(
+                                {ALL_COLS.filter(col => userRole !== "user" || col !== "Mode").map(col=>(
                                     <label key={col} className="flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded-lg">
                                         <input type="checkbox" checked={visibleCols.includes(col)}
                                             onChange={()=>setVisibleCols(p=>p.includes(col)?p.filter(c=>c!==col):[...p,col])}
